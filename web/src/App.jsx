@@ -43,6 +43,7 @@ import Pricing from './pages/Pricing';
 import Task from './pages/Task';
 import ModelPage from './pages/Model';
 import ModelDeploymentPage from './pages/ModelDeployment';
+import Status from './pages/Status';
 import Playground from './pages/Playground';
 import OAuth2Callback from './components/auth/OAuth2Callback';
 import PersonalSetting from './components/settings/PersonalSetting';
@@ -97,6 +98,14 @@ function App() {
           element={
             <Suspense fallback={<Loading></Loading>} key={location.pathname}>
               <Setup />
+            </Suspense>
+          }
+        />
+        <Route
+          path='/status'
+          element={
+            <Suspense fallback={<Loading></Loading>} key={location.pathname}>
+              <Status />
             </Suspense>
           }
         />
