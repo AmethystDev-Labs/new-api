@@ -39,10 +39,12 @@ func calculateModelStats() ([]ModelStat, error) {
 
 	// 使用原生 SQL 进行聚合统计
 	// type = 2 为 LogTypeConsume (成功), type = 5 为 LogTypeError (失败)
+	// 新增逻辑：即使 type 为 2，如果 completion_tokens <= 0 且为非流式请求（假设 stream 请求 latency 较低或有其他标识），也视为失败
+	// 但根据用户要求：completion_tokens 在等于小于 0 的情况下也算失败
 	err := LOG_DB.Table("logs").
 		Select("model_name, "+
-			"SUM(CASE WHEN type = 2 THEN 1 ELSE 0 END) as success_count, "+
-			"SUM(CASE WHEN type = 5 THEN 1 ELSE 0 END) as error_count, "+
+			"SUM(CASE WHEN type = 2 AND completion_tokens > 0 THEN 1 ELSE 0 END) as success_count, "+
+			"SUM(CASE WHEN type = 5 OR (type = 2 AND completion_tokens <= 0) THEN 1 ELSE 0 END) as error_count, "+
 			"AVG(use_time) as avg_latency").
 		Where("created_at > ? AND model_name != ''", startTime).
 		Group("model_name").

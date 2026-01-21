@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Table, Tag, Progress, Typography, Card, Space, Spin, Toast } from '@douyinfe/semi-ui';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Table, Tag, Progress, Typography, Card, Space, Spin, Toast, Input } from '@douyinfe/semi-ui';
+import { IconSearch } from '@douyinfe/semi-icons';
 import { API } from '../../helpers';
 
 const { Title, Text } = Typography;
@@ -7,13 +8,14 @@ const { Title, Text } = Typography;
 const Status = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState([]);
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   const loadStats = async () => {
     try {
       const res = await API.get('/api/model/stats');
       const { success, data } = res.data;
       if (success) {
-        setStats(data);
+        setStats(data || []);
       } else {
         Toast.error('获取数据失败');
       }
@@ -31,83 +33,115 @@ const Status = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const filteredStats = useMemo(() => {
+    if (!searchKeyword) return stats;
+    return stats.filter(item => 
+      item.model_name.toLowerCase().includes(searchKeyword.toLowerCase())
+    );
+  }, [stats, searchKeyword]);
+
   const columns = [
     {
       title: '模型名称',
       dataIndex: 'model_name',
       key: 'model_name',
-      render: (text) => <Text strong>{text}</Text>,
+      sorter: (a, b) => a.model_name.localeCompare(b.model_name),
+      render: (text) => (
+        <Text strong style={{ fontSize: '14px' }}>
+          {text}
+        </Text>
+      ),
     },
     {
       title: '请求次数 (24h)',
+      dataIndex: 'total_count',
       key: 'total_count',
-      render: (_, record) => (
-        <Space vertical align='start' spacing='tight'>
-          <Tag color='blue' shape='ghost'>成功: {record.success_count}</Tag>
-          <Tag color='red' shape='ghost'>失败: {record.error_count}</Tag>
-        </Space>
-      ),
       sorter: (a, b) => (a.success_count + a.error_count) - (b.success_count + b.error_count),
+      render: (_, record) => {
+        return (
+          <Space vertical align='start' spacing='extra-tight'>
+            <Tag color='green' size='small' variant='light'>
+              成功: {record.success_count}
+            </Tag>
+            <Tag color='red' size='small' variant='light'>
+              失败: {record.error_count}
+            </Tag>
+          </Space>
+        );
+      },
     },
     {
       title: '成功率',
       key: 'success_rate',
+      sorter: (a, b) => {
+        const rateA = a.success_count / (a.success_count + a.error_count || 1);
+        const rateB = b.success_count / (b.success_count + b.error_count || 1);
+        return rateA - rateB;
+      },
       render: (_, record) => {
         const total = record.success_count + record.error_count;
-        const rate = total === 0 ? 0 : (record.success_count / total) * 100;
-        let stroke = 'var(--semi-color-success)';
-        if (rate < 90) stroke = 'var(--semi-color-warning)';
-        if (rate < 70) stroke = 'var(--semi-color-danger)';
-        
+        const rate = total === 0 ? 0 : Math.round((record.success_count / total) * 100);
+        let color = '#3bb346'; // green
+        if (rate < 80) color = '#ff9d00'; // orange
+        if (rate < 50) color = '#f5222d'; // red
+
         return (
-          <div style={{ width: 150 }}>
-            <Progress 
-              percent={parseFloat(rate.toFixed(1))} 
-              showInfo
-              stroke={stroke}
-            />
+          <div style={{ width: '200px' }}>
+            <Space>
+              <Progress
+                percent={rate}
+                stroke={color}
+                showInfo={false}
+                style={{ width: '120px' }}
+              />
+              <Text strong>{rate}%</Text>
+            </Space>
           </div>
         );
-      },
-      sorter: (a, b) => {
-        const rateA = (a.success_count + a.error_count) === 0 ? 0 : (a.success_count / (a.success_count + a.error_count));
-        const rateB = (b.success_count + b.error_count) === 0 ? 0 : (b.success_count / (b.success_count + b.error_count));
-        return rateA - rateB;
       },
     },
     {
       title: '平均延迟',
       dataIndex: 'avg_latency',
       key: 'avg_latency',
-      render: (latency) => (
-        <Tag color={latency < 1000 ? 'green' : latency < 3000 ? 'amber' : 'red'}>
-          {latency.toFixed(2)}ms
+      sorter: (a, b) => a.avg_latency - b.avg_latency,
+      render: (text) => (
+        <Tag color='blue' variant='light'>
+          {text.toFixed(2)}ms
         </Tag>
       ),
-      sorter: (a, b) => a.avg_latency - b.avg_latency,
     },
   ];
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <Card bordered={false} style={{ marginBottom: '24px' }}>
-        <Title heading={2}>模型运行状态</Title>
-        <Text type="secondary">展示过去 24 小时内各模型的历史请求成功率及平均响应时间。数据每 10 分钟聚合更新一次。</Text>
-      </Card>
-
-      <Card bordered={false}>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '50px' }}>
-            <Spin size="large" />
-            <div style={{ marginTop: '12px' }}>加载中...</div>
-          </div>
-        ) : (
-          <Table 
-            dataSource={stats} 
-            columns={columns} 
-            pagination={{ pageSize: 20 }}
+    <div style={{ padding: '80px 24px 24px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+      <Card
+        title={
+          <Space vertical align='start'>
+            <Title heading={2}>模型运行状态</Title>
+            <Text type='secondary'>
+              展示过去 24 小时内各模型的历史请求成功率及平均响应时间。数据每 10 分钟聚合更新一次。
+            </Text>
+          </Space>
+        }
+        headerExtraContent={
+          <Input
+            prefix={<IconSearch />}
+            placeholder="搜索模型名称..."
+            value={searchKeyword}
+            onChange={value => setSearchKeyword(value)}
+            style={{ width: 250 }}
+            showClear
           />
-        )}
+        }
+      >
+        <Table
+          columns={columns}
+          dataSource={filteredStats}
+          loading={loading}
+          pagination={false}
+          empty='暂无统计数据'
+        />
       </Card>
     </div>
   );
