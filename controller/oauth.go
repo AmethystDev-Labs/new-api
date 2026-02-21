@@ -236,11 +236,11 @@ func findOrCreateOAuthUser(c *gin.Context, provider oauth.Provider, oauthUser *o
 	}
 
 	// Set up new user
-    if oidcUser.PreferredUsername != "" {
-        user.Username = oidcUser.PreferredUsername
-    } else {
-        user.Username = provider.GetProviderPrefix() + strconv.Itoa(model.GetMaxUserId()+1)
-    }
+	if oauthUser.Username != "" {
+		user.Username = oauthUser.Username
+	} else {
+		user.Username = provider.GetProviderPrefix() + strconv.Itoa(model.GetMaxUserId()+1)
+	}
 	if oauthUser.DisplayName != "" {
 		user.DisplayName = oauthUser.DisplayName
 	} else if oauthUser.Username != "" {
@@ -299,12 +299,12 @@ func findOrCreateOAuthUser(c *gin.Context, provider oauth.Provider, oauthUser *o
 			// Set the provider user ID on the user model and update
 			provider.SetProviderUserID(user, oauthUser.ProviderUserID)
 			if err := tx.Model(user).Updates(map[string]interface{}{
-				"github_id":    user.GitHubId,
-				"discord_id":   user.DiscordId,
-				"oidc_id":      user.OidcId,
-				"linux_do_id":  user.LinuxDOId,
-				"wechat_id":    user.WeChatId,
-				"telegram_id":  user.TelegramId,
+				"github_id":   user.GitHubId,
+				"discord_id":  user.DiscordId,
+				"oidc_id":     user.OidcId,
+				"linux_do_id": user.LinuxDOId,
+				"wechat_id":   user.WeChatId,
+				"telegram_id": user.TelegramId,
 			}).Error; err != nil {
 				return err
 			}
