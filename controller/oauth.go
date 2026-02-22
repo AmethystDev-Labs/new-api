@@ -344,6 +344,8 @@ func handleOAuthError(c *gin.Context, err error) {
 		} else {
 			common.ApiErrorI18n(c, e.MsgKey)
 		}
+	case *oauth.AccessDeniedError:
+		common.ApiErrorMsg(c, e.Message)
 	case *oauth.TrustLevelError:
 		common.ApiErrorI18n(c, i18n.MsgOAuthTrustLevelLow)
 	default:
