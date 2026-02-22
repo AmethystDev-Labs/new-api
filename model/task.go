@@ -288,6 +288,20 @@ func TaskGetAllTasks(startIdx int, num int, queryParams SyncTaskQueryParams) []*
 	return tasks
 }
 
+func GetTimedOutUnfinishedTasks(cutoffUnix int64, limit int) []*Task {
+	var tasks []*Task
+	err := DB.Where("progress != ?", "100%").
+		Where("status NOT IN ?", []string{TaskStatusFailure, TaskStatusSuccess}).
+		Where("submit_time < ?", cutoffUnix).
+		Order("submit_time").
+		Limit(limit).
+		Find(&tasks).Error
+	if err != nil {
+		return nil
+	}
+	return tasks
+}
+
 func GetAllUnFinishSyncTasks(limit int) []*Task {
 	var tasks []*Task
 	var err error
@@ -401,6 +415,11 @@ func (t *Task) UpdateWithStatus(fromStatus TaskStatus) (bool, error) {
 	return result.RowsAffected > 0, nil
 }
 
+// TaskBulkUpdateByID performs an unconditional bulk UPDATE by primary key IDs.
+// WARNING: This function has NO CAS (Compare-And-Swap) guard — it will overwrite
+// any concurrent status changes. DO NOT use in billing/quota lifecycle flows
+// (e.g., timeout, success, failure transitions that trigger refunds or settlements).
+// For status transitions that involve billing, use Task.UpdateWithStatus() instead.
 func TaskBulkUpdateByID(ids []int64, params map[string]any) error {
 	if len(ids) == 0 {
 		return nil
