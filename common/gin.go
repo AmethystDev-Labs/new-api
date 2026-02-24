@@ -303,7 +303,13 @@ func parseFormData(data []byte, v any) error {
 }
 
 func parseMultipartFormData(c *gin.Context, data []byte, v any) error {
-	contentType := c.Request.Header.Get("Content-Type")
+	var contentType string
+	if saved, ok := c.Get("_original_multipart_ct"); ok {
+		contentType = saved.(string)
+	} else {
+		contentType = c.Request.Header.Get("Content-Type")
+		c.Set("_original_multipart_ct", contentType)
+	}
 	boundary, err := parseBoundary(contentType)
 	if err != nil {
 		if errors.Is(err, errBoundaryNotFound) {

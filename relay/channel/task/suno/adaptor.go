@@ -2,12 +2,10 @@ package suno
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -52,13 +50,13 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 		return
 	}
 
-	if sunoRequest.ContinueClipId != "" {
-		if sunoRequest.TaskID == "" {
-			taskErr = service.TaskErrorWrapperLocal(fmt.Errorf("task id is empty"), "invalid_request", http.StatusBadRequest)
-			return
-		}
-		info.OriginTaskID = sunoRequest.TaskID
-	}
+	//if sunoRequest.ContinueClipId != "" {
+	//	if sunoRequest.TaskID == "" {
+	//		taskErr = service.TaskErrorWrapperLocal(fmt.Errorf("task id is empty"), "invalid_request", http.StatusBadRequest)
+	//		return
+	//	}
+	//	info.OriginTaskID = sunoRequest.TaskID
+	//}
 
 	info.Action = action
 	c.Set("task_request", sunoRequest)
@@ -142,13 +140,6 @@ func (a *TaskAdaptor) FetchTask(baseUrl, key string, body map[string]any, proxy 
 		common.SysLog(fmt.Sprintf("Get Task error: %v", err))
 		return nil, err
 	}
-	defer req.Body.Close()
-	// 设置超时时间
-	timeout := time.Second * 15
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	// 使用带有超时的 context 创建新的请求
-	req = req.WithContext(ctx)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+key)
 	client, err := service.GetHttpClientWithProxy(proxy)

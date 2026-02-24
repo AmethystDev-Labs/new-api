@@ -240,6 +240,7 @@ export const getTaskLogsColumns = ({
   openContentModal,
   isAdminUser,
   openVideoModal,
+  openAudioModal,
 }) => {
   return [
     {
@@ -386,6 +387,26 @@ export const getTaskLogsColumns = ({
       dataIndex: 'fail_reason',
       fixed: 'right',
       render: (text, record, index) => {
+        // Suno audio preview
+        const isSunoSuccess =
+          record.platform === 'suno' &&
+          record.status === 'SUCCESS' &&
+          Array.isArray(record.data) &&
+          record.data.some((c) => c.audio_url);
+        if (isSunoSuccess) {
+          return (
+            <a
+              href='#'
+              onClick={(e) => {
+                e.preventDefault();
+                openAudioModal(record.data);
+              }}
+            >
+              {t('点击预览音乐')}
+            </a>
+          );
+        }
+
         // 视频预览：优先使用 result_url，兼容旧数据 fail_reason 中的 URL
         const isVideoTask =
           record.action === TASK_ACTION_GENERATE ||

@@ -44,6 +44,37 @@ function parseStatusCodeMappingTarget(rawValue) {
   return null;
 }
 
+export function collectInvalidStatusCodeEntries(statusCodeMappingStr) {
+  if (
+    typeof statusCodeMappingStr !== 'string' ||
+    statusCodeMappingStr.trim() === ''
+  ) {
+    return [];
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(statusCodeMappingStr);
+  } catch {
+    return [];
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return [];
+  }
+
+  const invalid = [];
+  for (const [rawKey, rawValue] of Object.entries(parsed)) {
+    const fromCode = parseStatusCodeKey(rawKey);
+    const toCode = parseStatusCodeMappingTarget(rawValue);
+    if (fromCode === null || toCode === null) {
+      invalid.push(`${rawKey} → ${rawValue}`);
+    }
+  }
+
+  return invalid;
+}
+
 export function collectDisallowedStatusCodeRedirects(statusCodeMappingStr) {
   if (
     typeof statusCodeMappingStr !== 'string' ||

@@ -44,8 +44,6 @@ const RiskMarkdownBlock = React.memo(function RiskMarkdownBlock({
       className='rounded-lg'
       style={{
         border: '1px solid var(--semi-color-warning-light-hover)',
-        background:
-          'linear-gradient(180deg, var(--semi-color-warning-light-default) 0%, var(--semi-color-fill-0) 100%)',
         padding: '12px',
         contentVisibility: 'auto',
       }}
@@ -136,15 +134,6 @@ const RiskAcknowledgementModal = React.memo(function RiskAcknowledgementModal({
       }
     >
       <div className='flex flex-col gap-4'>
-        <div
-          className='rounded-lg'
-          style={{
-            border: '1px solid var(--semi-color-warning-light-hover)',
-            background: 'var(--semi-color-warning-light-default)',
-            padding: isMobile ? '10px 12px' : '12px 14px',
-          }}
-        >
-        </div>
 
         <RiskMarkdownBlock markdownContent={markdownContent} />
 
