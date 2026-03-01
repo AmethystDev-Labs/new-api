@@ -238,33 +238,18 @@ func SearchUsers(keyword string, group string, startIdx int, num int) ([]*User, 
 		}
 	}()
 
-	// 构建基础查询
 	query := tx.Unscoped().Model(&User{})
+	if group != "" {
+		query = query.Where(commonGroupCol+" = ?", group)
+	}
 
-	// 构建搜索条件
-	likeCondition := "username LIKE ? OR email LIKE ? OR display_name LIKE ?"
-
-	// 尝试将关键字转换为整数ID
-	keywordInt, err := strconv.Atoi(keyword)
-	if err == nil {
-		// 如果是数字，同时搜索ID和其他字段
-		likeCondition = "id = ? OR " + likeCondition
-		if group != "" {
-			query = query.Where("("+likeCondition+") AND "+commonGroupCol+" = ?",
-				keywordInt, "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", group)
-		} else {
-			query = query.Where(likeCondition,
-				keywordInt, "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
-		}
-	} else {
-		// 非数字关键字，只搜索字符串字段
-		if group != "" {
-			query = query.Where("("+likeCondition+") AND "+commonGroupCol+" = ?",
-				"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", group)
-		} else {
-			query = query.Where(likeCondition,
-				"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
-		}
+	conditions, parseErr := parseUserSearchKeyword(keyword)
+	if parseErr != nil {
+		tx.Rollback()
+		return nil, 0, parseErr
+	}
+	for _, cond := range conditions {
+		query = applyUserSearchCondition(query, cond)
 	}
 
 	// 获取总数
@@ -287,6 +272,154 @@ func SearchUsers(keyword string, group string, startIdx int, num int) ([]*User, 
 	}
 
 	return users, total, nil
+}
+
+const (
+	userSearchMaxKeywordLength = 128
+	userSearchMaxConditions    = 5
+)
+
+type userSearchCondition struct {
+	field   string
+	pattern string
+	id      *int
+}
+
+func parseUserSearchKeyword(keyword string) ([]userSearchCondition, error) {
+	keyword = strings.TrimSpace(keyword)
+	if keyword == "" {
+		return nil, nil
+	}
+	if len(keyword) > userSearchMaxKeywordLength {
+		return nil, errors.New("搜索关键词过长")
+	}
+	tokens := []string{keyword}
+	if isUserSearchExpression(keyword) {
+		tokens = strings.Fields(keyword)
+	}
+	if len(tokens) > userSearchMaxConditions {
+		return nil, errors.New("搜索条件过多")
+	}
+	conditions := make([]userSearchCondition, 0, len(tokens))
+	for _, token := range tokens {
+		conditions = append(conditions, parseUserSearchToken(token)...)
+	}
+	return conditions, nil
+}
+
+func isUserSearchExpression(keyword string) bool {
+	if strings.Contains(keyword, "*") {
+		return true
+	}
+	for _, token := range strings.Fields(keyword) {
+		_, _, ok := splitUserSearchFieldToken(token)
+		if ok {
+			return true
+		}
+	}
+	return false
+}
+
+func parseUserSearchToken(token string) []userSearchCondition {
+	field, value, ok := splitUserSearchFieldToken(token)
+	if !ok {
+		return []userSearchCondition{buildDefaultUserSearchCondition(token)}
+	}
+	if value == "" {
+		return nil
+	}
+	return []userSearchCondition{buildFieldUserSearchCondition(field, value)}
+}
+
+func splitUserSearchFieldToken(token string) (string, string, bool) {
+	idx := strings.Index(token, ":")
+	if idx <= 0 || idx >= len(token)-1 {
+		return "", "", false
+	}
+	field := strings.ToLower(strings.TrimSpace(token[:idx]))
+	switch field {
+	case "id", "username", "email", "display_name", "group":
+		return field, strings.TrimSpace(token[idx+1:]), true
+	default:
+		return "", "", false
+	}
+}
+
+func buildDefaultUserSearchCondition(token string) userSearchCondition {
+	pattern, hasWildcard := buildUserSearchLikePattern(token)
+	if !hasWildcard {
+		pattern = "%" + pattern + "%"
+	}
+	keywordInt, err := strconv.Atoi(token)
+	if err == nil && !hasWildcard {
+		return userSearchCondition{
+			id:      &keywordInt,
+			pattern: pattern,
+		}
+	}
+	return userSearchCondition{
+		pattern: pattern,
+	}
+}
+
+func buildFieldUserSearchCondition(field string, value string) userSearchCondition {
+	cond := userSearchCondition{field: field}
+	if field == "id" {
+		id, err := strconv.Atoi(value)
+		if err == nil {
+			cond.id = &id
+		}
+		return cond
+	}
+	pattern, hasWildcard := buildUserSearchLikePattern(value)
+	if !hasWildcard {
+		pattern = "%" + pattern + "%"
+	}
+	cond.pattern = pattern
+	return cond
+}
+
+func buildUserSearchLikePattern(input string) (string, bool) {
+	var builder strings.Builder
+	hasWildcard := false
+	for _, ch := range input {
+		switch ch {
+		case '*':
+			builder.WriteByte('%')
+			hasWildcard = true
+		case '%', '_', '\\':
+			builder.WriteByte('\\')
+			builder.WriteRune(ch)
+		default:
+			builder.WriteRune(ch)
+		}
+	}
+	return builder.String(), hasWildcard
+}
+
+func applyUserSearchCondition(query *gorm.DB, cond userSearchCondition) *gorm.DB {
+	switch cond.field {
+	case "id":
+		if cond.id == nil {
+			return query.Where("1 = 0")
+		}
+		return query.Where("id = ?", *cond.id)
+	case "username":
+		return query.Where("username LIKE ? ESCAPE '\\'", cond.pattern)
+	case "email":
+		return query.Where("email LIKE ? ESCAPE '\\'", cond.pattern)
+	case "display_name":
+		return query.Where("display_name LIKE ? ESCAPE '\\'", cond.pattern)
+	case "group":
+		return query.Where(commonGroupCol+" LIKE ? ESCAPE '\\'", cond.pattern)
+	default:
+		if cond.id != nil {
+			return query.Where("(id = ? OR username LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\' OR display_name LIKE ? ESCAPE '\\')",
+				*cond.id, cond.pattern, cond.pattern, cond.pattern)
+		}
+		return query.Where("(username LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\' OR display_name LIKE ? ESCAPE '\\')",
+			cond.pattern, cond.pattern, cond.pattern)
+	}
 }
 
 func GetUserById(id int, selectAll bool) (*User, error) {

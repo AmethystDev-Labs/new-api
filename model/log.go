@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -250,17 +251,21 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 		tx = LOG_DB.Where("logs.type = ?", logType)
 	}
 
-	if modelName != "" {
-		tx = tx.Where("logs.model_name like ?", modelName)
+	tx, err = applyLogSearchInput(tx, modelName, "model_name")
+	if err != nil {
+		return nil, 0, err
 	}
-	if username != "" {
-		tx = tx.Where("logs.username = ?", username)
+	tx, err = applyLogSearchInput(tx, username, "username")
+	if err != nil {
+		return nil, 0, err
 	}
-	if tokenName != "" {
-		tx = tx.Where("logs.token_name = ?", tokenName)
+	tx, err = applyLogSearchInput(tx, tokenName, "token_name")
+	if err != nil {
+		return nil, 0, err
 	}
-	if requestId != "" {
-		tx = tx.Where("logs.request_id = ?", requestId)
+	tx, err = applyLogSearchInput(tx, requestId, "request_id")
+	if err != nil {
+		return nil, 0, err
 	}
 	if startTimestamp != 0 {
 		tx = tx.Where("logs.created_at >= ?", startTimestamp)
@@ -271,8 +276,9 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 	if channel != 0 {
 		tx = tx.Where("logs.channel_id = ?", channel)
 	}
-	if group != "" {
-		tx = tx.Where("logs."+logGroupCol+" = ?", group)
+	tx, err = applyLogSearchInput(tx, group, "group")
+	if err != nil {
+		return nil, 0, err
 	}
 	err = tx.Model(&Log{}).Count(&total).Error
 	if err != nil {
@@ -336,18 +342,17 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 		tx = LOG_DB.Where("logs.user_id = ? and logs.type = ?", userId, logType)
 	}
 
-	if modelName != "" {
-		modelNamePattern, err := sanitizeLikePattern(modelName)
-		if err != nil {
-			return nil, 0, err
-		}
-		tx = tx.Where("logs.model_name LIKE ? ESCAPE '!'", modelNamePattern)
+	tx, err = applyLogSearchInput(tx, modelName, "model_name")
+	if err != nil {
+		return nil, 0, err
 	}
-	if tokenName != "" {
-		tx = tx.Where("logs.token_name = ?", tokenName)
+	tx, err = applyLogSearchInput(tx, tokenName, "token_name")
+	if err != nil {
+		return nil, 0, err
 	}
-	if requestId != "" {
-		tx = tx.Where("logs.request_id = ?", requestId)
+	tx, err = applyLogSearchInput(tx, requestId, "request_id")
+	if err != nil {
+		return nil, 0, err
 	}
 	if startTimestamp != 0 {
 		tx = tx.Where("logs.created_at >= ?", startTimestamp)
@@ -355,8 +360,9 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 	if endTimestamp != 0 {
 		tx = tx.Where("logs.created_at <= ?", endTimestamp)
 	}
-	if group != "" {
-		tx = tx.Where("logs."+logGroupCol+" = ?", group)
+	tx, err = applyLogSearchInput(tx, group, "group")
+	if err != nil {
+		return nil, 0, err
 	}
 	err = tx.Model(&Log{}).Limit(logSearchCountLimit).Count(&total).Error
 	if err != nil {
@@ -385,13 +391,21 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 	// 为rpm和tpm创建单独的查询
 	rpmTpmQuery := LOG_DB.Table("logs").Select("count(*) rpm, sum(prompt_tokens) + sum(completion_tokens) tpm")
 
-	if username != "" {
-		tx = tx.Where("username = ?", username)
-		rpmTpmQuery = rpmTpmQuery.Where("username = ?", username)
+	tx, err = applyLogSearchInput(tx, username, "username")
+	if err != nil {
+		return stat, err
 	}
-	if tokenName != "" {
-		tx = tx.Where("token_name = ?", tokenName)
-		rpmTpmQuery = rpmTpmQuery.Where("token_name = ?", tokenName)
+	rpmTpmQuery, err = applyLogSearchInput(rpmTpmQuery, username, "username")
+	if err != nil {
+		return stat, err
+	}
+	tx, err = applyLogSearchInput(tx, tokenName, "token_name")
+	if err != nil {
+		return stat, err
+	}
+	rpmTpmQuery, err = applyLogSearchInput(rpmTpmQuery, tokenName, "token_name")
+	if err != nil {
+		return stat, err
 	}
 	if startTimestamp != 0 {
 		tx = tx.Where("created_at >= ?", startTimestamp)
@@ -399,21 +413,25 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 	if endTimestamp != 0 {
 		tx = tx.Where("created_at <= ?", endTimestamp)
 	}
-	if modelName != "" {
-		modelNamePattern, err := sanitizeLikePattern(modelName)
-		if err != nil {
-			return stat, err
-		}
-		tx = tx.Where("model_name LIKE ? ESCAPE '!'", modelNamePattern)
-		rpmTpmQuery = rpmTpmQuery.Where("model_name LIKE ? ESCAPE '!'", modelNamePattern)
+	tx, err = applyLogSearchInput(tx, modelName, "model_name")
+	if err != nil {
+		return stat, err
+	}
+	rpmTpmQuery, err = applyLogSearchInput(rpmTpmQuery, modelName, "model_name")
+	if err != nil {
+		return stat, err
 	}
 	if channel != 0 {
 		tx = tx.Where("channel_id = ?", channel)
 		rpmTpmQuery = rpmTpmQuery.Where("channel_id = ?", channel)
 	}
-	if group != "" {
-		tx = tx.Where(logGroupCol+" = ?", group)
-		rpmTpmQuery = rpmTpmQuery.Where(logGroupCol+" = ?", group)
+	tx, err = applyLogSearchInput(tx, group, "group")
+	if err != nil {
+		return stat, err
+	}
+	rpmTpmQuery, err = applyLogSearchInput(rpmTpmQuery, group, "group")
+	if err != nil {
+		return stat, err
 	}
 
 	tx = tx.Where("type = ?", LogTypeConsume)
@@ -477,4 +495,142 @@ func DeleteOldLog(ctx context.Context, targetTimestamp int64, limit int) (int64,
 	}
 
 	return total, nil
+}
+
+const (
+	logSearchMaxKeywordLength = 128
+	logSearchMaxConditions    = 6
+)
+
+type logSearchCondition struct {
+	field   string
+	value   string
+	useLike bool
+}
+
+func applyLogSearchInput(query *gorm.DB, input string, defaultField string) (*gorm.DB, error) {
+	conditions, err := parseLogSearchInput(input, defaultField)
+	if err != nil {
+		return query, err
+	}
+	for _, cond := range conditions {
+		column, ok := getLogSearchColumn(cond.field)
+		if !ok {
+			continue
+		}
+		if cond.useLike {
+			query = query.Where(column+" LIKE ? ESCAPE '!'", cond.value)
+		} else {
+			query = query.Where(column+" = ?", cond.value)
+		}
+	}
+	return query, nil
+}
+
+func parseLogSearchInput(input string, defaultField string) ([]logSearchCondition, error) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return nil, nil
+	}
+	if len(input) > logSearchMaxKeywordLength {
+		return nil, errors.New("搜索关键词过长")
+	}
+	tokens := []string{input}
+	if isLogSearchExpression(input) {
+		tokens = strings.Fields(input)
+	}
+	if len(tokens) > logSearchMaxConditions {
+		return nil, errors.New("搜索条件过多")
+	}
+	conditions := make([]logSearchCondition, 0, len(tokens))
+	for _, token := range tokens {
+		field, value, ok := splitLogSearchFieldToken(token)
+		if !ok {
+			field = defaultField
+			value = token
+		}
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		pattern, useLike, err := buildLogSearchPattern(value)
+		if err != nil {
+			return nil, err
+		}
+		conditions = append(conditions, logSearchCondition{
+			field:   field,
+			value:   pattern,
+			useLike: useLike,
+		})
+	}
+	return conditions, nil
+}
+
+func isLogSearchExpression(input string) bool {
+	if strings.Contains(input, "*") || strings.Contains(input, "%") {
+		return true
+	}
+	for _, token := range strings.Fields(input) {
+		_, _, ok := splitLogSearchFieldToken(token)
+		if ok {
+			return true
+		}
+	}
+	return false
+}
+
+func splitLogSearchFieldToken(token string) (string, string, bool) {
+	idx := strings.Index(token, ":")
+	if idx <= 0 || idx >= len(token)-1 {
+		return "", "", false
+	}
+	field := strings.ToLower(strings.TrimSpace(token[:idx]))
+	switch field {
+	case "request_id", "username", "token_name", "model_name", "group":
+		return field, token[idx+1:], true
+	default:
+		return "", "", false
+	}
+}
+
+func buildLogSearchPattern(value string) (string, bool, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", false, nil
+	}
+	hasWildcard := strings.Contains(value, "*") || strings.Contains(value, "%")
+	if !hasWildcard {
+		return value, false, nil
+	}
+	var builder strings.Builder
+	for _, ch := range value {
+		switch ch {
+		case '*':
+			builder.WriteByte('%')
+		default:
+			builder.WriteRune(ch)
+		}
+	}
+	pattern, err := sanitizeLikePattern(builder.String())
+	if err != nil {
+		return "", false, err
+	}
+	return pattern, true, nil
+}
+
+func getLogSearchColumn(field string) (string, bool) {
+	switch field {
+	case "request_id":
+		return "logs.request_id", true
+	case "username":
+		return "logs.username", true
+	case "token_name":
+		return "logs.token_name", true
+	case "model_name":
+		return "logs.model_name", true
+	case "group":
+		return "logs." + logGroupCol, true
+	default:
+		return "", false
+	}
 }
