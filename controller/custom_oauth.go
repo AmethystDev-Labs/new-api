@@ -38,6 +38,14 @@ type CustomOAuthProviderResponse struct {
 	AccessDeniedMessage   string `json:"access_denied_message"`
 }
 
+type UserOAuthBindingResponse struct {
+	ProviderId     int    `json:"provider_id"`
+	ProviderName   string `json:"provider_name"`
+	ProviderSlug   string `json:"provider_slug"`
+	ProviderIcon   string `json:"provider_icon"`
+	ProviderUserId string `json:"provider_user_id"`
+}
+
 func toCustomOAuthProviderResponse(p *model.CustomOAuthProvider) *CustomOAuthProviderResponse {
 	return &CustomOAuthProviderResponse{
 		Id:                    p.Id,
@@ -433,6 +441,30 @@ func DeleteCustomOAuthProvider(c *gin.Context) {
 	})
 }
 
+func buildUserOAuthBindingsResponse(userId int) ([]UserOAuthBindingResponse, error) {
+	bindings, err := model.GetUserOAuthBindingsByUserId(userId)
+	if err != nil {
+		return nil, err
+	}
+
+	response := make([]UserOAuthBindingResponse, 0, len(bindings))
+	for _, binding := range bindings {
+		provider, err := model.GetCustomOAuthProviderById(binding.ProviderId)
+		if err != nil {
+			continue
+		}
+		response = append(response, UserOAuthBindingResponse{
+			ProviderId:     binding.ProviderId,
+			ProviderName:   provider.Name,
+			ProviderSlug:   provider.Slug,
+			ProviderIcon:   provider.Icon,
+			ProviderUserId: binding.ProviderUserId,
+		})
+	}
+
+	return response, nil
+}
+
 // GetUserOAuthBindings returns all OAuth bindings for the current user
 func GetUserOAuthBindings(c *gin.Context) {
 	userId := c.GetInt("id")
@@ -441,34 +473,43 @@ func GetUserOAuthBindings(c *gin.Context) {
 		return
 	}
 
-	bindings, err := model.GetUserOAuthBindingsByUserId(userId)
+	response, err := buildUserOAuthBindingsResponse(userId)
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
 
-	// Build response with provider info
-	type BindingResponse struct {
-		ProviderId     int    `json:"provider_id"`
-		ProviderName   string `json:"provider_name"`
-		ProviderSlug   string `json:"provider_slug"`
-		ProviderIcon   string `json:"provider_icon"`
-		ProviderUserId string `json:"provider_user_id"`
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    response,
+	})
+}
+
+func GetUserOAuthBindingsByAdmin(c *gin.Context) {
+	userIdStr := c.Param("id")
+	userId, err := strconv.Atoi(userIdStr)
+	if err != nil {
+		common.ApiErrorMsg(c, "invalid user id")
+		return
 	}
 
-	response := make([]BindingResponse, 0)
-	for _, binding := range bindings {
-		provider, err := model.GetCustomOAuthProviderById(binding.ProviderId)
-		if err != nil {
-			continue // Skip if provider not found
-		}
-		response = append(response, BindingResponse{
-			ProviderId:     binding.ProviderId,
-			ProviderName:   provider.Name,
-			ProviderSlug:   provider.Slug,
-			ProviderIcon:   provider.Icon,
-			ProviderUserId: binding.ProviderUserId,
-		})
+	targetUser, err := model.GetUserById(userId, false)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	myRole := c.GetInt("role")
+	if myRole <= targetUser.Role && myRole != common.RoleRootUser {
+		common.ApiErrorMsg(c, "no permission")
+		return
+	}
+
+	response, err := buildUserOAuthBindingsResponse(userId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -501,5 +542,43 @@ func UnbindCustomOAuth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "解绑成功",
+	})
+}
+
+func UnbindCustomOAuthByAdmin(c *gin.Context) {
+	userIdStr := c.Param("id")
+	userId, err := strconv.Atoi(userIdStr)
+	if err != nil {
+		common.ApiErrorMsg(c, "invalid user id")
+		return
+	}
+
+	targetUser, err := model.GetUserById(userId, false)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	myRole := c.GetInt("role")
+	if myRole <= targetUser.Role && myRole != common.RoleRootUser {
+		common.ApiErrorMsg(c, "no permission")
+		return
+	}
+
+	providerIdStr := c.Param("provider_id")
+	providerId, err := strconv.Atoi(providerIdStr)
+	if err != nil {
+		common.ApiErrorMsg(c, "invalid provider id")
+		return
+	}
+
+	if err := model.DeleteUserOAuthBinding(userId, providerId); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "success",
 	})
 }

@@ -236,10 +236,14 @@ func findOrCreateOAuthUser(c *gin.Context, provider oauth.Provider, oauthUser *o
 	}
 
 	// Set up new user
+	user.Username = provider.GetProviderPrefix() + strconv.Itoa(model.GetMaxUserId()+1)
 	if oauthUser.Username != "" {
-		user.Username = oauthUser.Username
-	} else {
-		user.Username = provider.GetProviderPrefix() + strconv.Itoa(model.GetMaxUserId()+1)
+		if exists, err := model.CheckUserExistOrDeleted(oauthUser.Username, ""); err == nil && !exists {
+			// Prevent username index degradation caused by oversize input.
+			if len(oauthUser.Username) <= model.UserNameMaxLength {
+				user.Username = oauthUser.Username
+			}
+		}
 	}
 	if oauthUser.DisplayName != "" {
 		user.DisplayName = oauthUser.DisplayName

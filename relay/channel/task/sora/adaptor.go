@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"strconv"
 	"strings"
 
@@ -186,7 +187,22 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 				if err != nil {
 					continue
 				}
-				part, err := writer.CreateFormFile(fieldName, fh.Filename)
+				ct := fh.Header.Get("Content-Type")
+				if ct == "" || ct == "application/octet-stream" {
+					buf512 := make([]byte, 512)
+					n, _ := io.ReadFull(f, buf512)
+					ct = http.DetectContentType(buf512[:n])
+					// Re-open after sniffing so the full content is copied below
+					f.Close()
+					f, err = fh.Open()
+					if err != nil {
+						continue
+					}
+				}
+				h := make(textproto.MIMEHeader)
+				h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, fieldName, fh.Filename))
+				h.Set("Content-Type", ct)
+				part, err := writer.CreatePart(h)
 				if err != nil {
 					f.Close()
 					continue

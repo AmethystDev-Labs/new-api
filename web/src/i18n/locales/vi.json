@@ -3296,6 +3296,7 @@
     "缓存写": "Ghi bộ nhớ đệm",
     "写": "Ghi",
     "根据 Anthropic 协定，/v1/messages 的输入 tokens 仅统计非缓存输入，不包含缓存读取与缓存写入 tokens。": "Theo quy ước của Anthropic, input tokens của /v1/messages chỉ tính phần đầu vào không dùng cache và không bao gồm tokens đọc/ghi cache.",
-    "设计版本": "b80c3466cb6feafeb3990c7820e10e50"
+    "设计版本": "b80c3466cb6feafeb3990c7820e10e50",
+    "未匹配到模型，按回车键可将「{{name}}」作为自定义模型名添加": "Không tìm thấy mô hình khớp. Nhấn Enter để thêm \"{{name}}\" làm tên mô hình tùy chỉnh."
   }
 }
