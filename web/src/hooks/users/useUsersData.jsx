@@ -105,9 +105,14 @@ export const useUsersData = () => {
       return;
     }
     setSearching(true);
-    const res = await API.get(
-      `/api/user/search?keyword=${searchKeyword}&group=${searchGroup}&p=${startIdx}&page_size=${pageSize}`,
-    );
+    const res = await API.get('/api/user/search', {
+      params: {
+        keyword: searchKeyword,
+        group: searchGroup,
+        p: startIdx,
+        page_size: pageSize,
+      },
+    });
     const { success, message, data } = res.data;
     if (success) {
       const newPageData = data.items;
