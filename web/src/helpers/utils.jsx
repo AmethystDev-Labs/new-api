@@ -391,25 +391,46 @@ export const getAmfsCaptchaToken = async ({
     scene,
     userId,
   });
+  const extractEventIdRecursively = (value, depth = 0) => {
+    if (depth > 6 || value === null || typeof value === 'undefined') {
+      return '';
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed.startsWith('evt_') ? trimmed : '';
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = extractEventIdRecursively(item, depth + 1);
+        if (found) return found;
+      }
+      return '';
+    }
+    if (typeof value === 'object') {
+      const preferredKeys = ['eventId', 'eventID', 'event_id'];
+      for (const key of preferredKeys) {
+        if (Object.prototype.hasOwnProperty.call(value, key)) {
+          const found = extractEventIdRecursively(value[key], depth + 1);
+          if (found) return found;
+        }
+      }
+      for (const [key, nestedValue] of Object.entries(value)) {
+        const normalizedKey = key.toLowerCase();
+        if (
+          normalizedKey === 'requestid' ||
+          normalizedKey === 'request_id' ||
+          normalizedKey.endsWith('requestid')
+        ) {
+          continue;
+        }
+        const found = extractEventIdRecursively(nestedValue, depth + 1);
+        if (found) return found;
+      }
+    }
+    return '';
+  };
 
-  const eventIdCandidates = [
-    risk?.eventId,
-    risk?.eventID,
-    risk?.event_id,
-    risk?.event?.eventId,
-    risk?.event?.eventID,
-    risk?.event?.event_id,
-    risk?.collect?.eventId,
-    risk?.collectResult?.eventId,
-    risk?.data?.eventId,
-    risk?.data?.eventID,
-    risk?.data?.event_id,
-  ];
-
-  const eventId = eventIdCandidates.find(
-    (candidate) => typeof candidate === 'string' && candidate.trim() !== '',
-  );
-  return eventId ? eventId.trim() : '';
+  return extractEventIdRecursively(risk);
 };
 
 export function verifyJSONPromise(value) {

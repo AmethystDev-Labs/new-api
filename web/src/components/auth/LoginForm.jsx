@@ -303,7 +303,11 @@ const LoginForm = () => {
         showError('请输入用户名和密码！');
       }
     } catch (error) {
-      showError('登录失败，请重试');
+      if (isAmfsCaptcha) {
+        showError(error?.message || 'AMFS 校验失败，请重试');
+      } else {
+        showError('登录失败，请重试');
+      }
     } finally {
       setLoginLoading(false);
     }
