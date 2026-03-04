@@ -99,6 +99,11 @@ var TurnstileSecretKey = ""
 var HCaptchaSiteKey = ""
 var HCaptchaSecretKey = ""
 var CaptchaProvider = "turnstile"
+var AMFSApiBase = ""
+var AMFSSiteID = ""
+var AMFSScoreThreshold = 70
+var AMFSTimeoutMs = 5000
+var AMFSFailOpen = true
 
 var TelegramBotToken = ""
 var TelegramBotName = ""

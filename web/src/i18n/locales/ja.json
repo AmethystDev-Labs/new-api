@@ -3139,6 +3139,12 @@
     "验证码提供商": "captcha プロバイダー",
     "hCaptcha Site Key": "hCaptcha Site Key",
     "hCaptcha Secret Key": "hCaptcha Secret Key",
+    "AMFS API Base": "AMFS API Base",
+    "例如：https://amfs.amethyst.ltd": "例：https://amfs.amethyst.ltd",
+    "AMFS Site ID": "AMFS Site ID",
+    "AMFS 分数阈值（0-100）": "AMFS スコア閾値（0-100）",
+    "AMFS 超时时间（毫秒）": "AMFS タイムアウト（ミリ秒）",
+    "AMFS 失败时放行（Fail Open）": "AMFS 失敗時は許可（Fail Open）",
     "保存验证码设置": "captcha 設定を保存",
     "请稍后几秒重试，验证码正在检查用户环境！": "数秒後に再試行してください。captcha がユーザー環境を確認中です！",
     "验证码已启用但 Site Key 为空。": "captcha は有効ですが Site Key が空です。"

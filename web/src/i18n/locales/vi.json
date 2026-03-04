@@ -3711,6 +3711,12 @@
     "验证码提供商": "Nhà cung cấp captcha",
     "hCaptcha Site Key": "hCaptcha Site Key",
     "hCaptcha Secret Key": "hCaptcha Secret Key",
+    "AMFS API Base": "AMFS API Base",
+    "例如：https://amfs.amethyst.ltd": "Ví dụ: https://amfs.amethyst.ltd",
+    "AMFS Site ID": "AMFS Site ID",
+    "AMFS 分数阈值（0-100）": "Ngưỡng điểm AMFS (0-100)",
+    "AMFS 超时时间（毫秒）": "Thời gian chờ AMFS (mili giây)",
+    "AMFS 失败时放行（Fail Open）": "Cho phép khi AMFS lỗi (Fail Open)",
     "保存验证码设置": "Lưu cài đặt captcha",
     "请稍后几秒重试，验证码正在检查用户环境！": "Vui lòng thử lại sau vài giây, captcha đang kiểm tra môi trường người dùng!",
     "验证码已启用但 Site Key 为空。": "Captcha đã bật nhưng Site Key đang để trống."

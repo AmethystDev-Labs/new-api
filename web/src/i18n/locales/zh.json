@@ -3078,6 +3078,12 @@
     "默认折叠侧边栏": "默认折叠侧边栏",
     "默认测试模型": "默认测试模型",
     "默认用户消息": "默认用户消息",
-    "默认补全倍率": "默认补全倍率"
+    "默认补全倍率": "默认补全倍率",
+    "AMFS API Base": "AMFS API Base",
+    "例如：https://amfs.amethyst.ltd": "例如：https://amfs.amethyst.ltd",
+    "AMFS Site ID": "AMFS Site ID",
+    "AMFS 分数阈值（0-100）": "AMFS 分数阈值（0-100）",
+    "AMFS 超时时间（毫秒）": "AMFS 超时时间（毫秒）",
+    "AMFS 失败时放行（Fail Open）": "AMFS 失败时放行（Fail Open）"
   }
 }

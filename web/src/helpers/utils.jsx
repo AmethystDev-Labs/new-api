@@ -293,7 +293,107 @@ export const getCaptchaQueryString = (token, captchaProvider = 'turnstile') => {
   if (captchaProvider === 'hcaptcha') {
     return `hcaptcha=${encodedToken}&captcha=${encodedToken}`;
   }
+  if (captchaProvider === 'amfs') {
+    return `amfs=${encodedToken}&captcha=${encodedToken}`;
+  }
   return `turnstile=${encodedToken}&captcha=${encodedToken}`;
+};
+
+let amfsSdkLoadPromise = null;
+let amfsInitializedKey = '';
+const TRUSTED_AMFS_DOMAINS = ['amfs.amethyst.ltd'];
+
+const isTrustedDomain = (domain, trustedDomain) =>
+  domain === trustedDomain || domain.endsWith(`.${trustedDomain}`);
+
+const normalizeAndValidateAmfsApiBase = (apiBase) => {
+  const raw = (apiBase || '').trim();
+  if (!raw) {
+    throw new Error('AMFS API Base 不能为空');
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error('AMFS API Base 格式无效');
+  }
+
+  if (parsed.protocol !== 'https:') {
+    throw new Error('AMFS API Base 必须使用 https');
+  }
+  if (parsed.search || parsed.hash) {
+    throw new Error('AMFS API Base 不能包含 query 或 fragment');
+  }
+  if (parsed.pathname && parsed.pathname !== '/') {
+    throw new Error('AMFS API Base 不能包含 path');
+  }
+  if (parsed.port && parsed.port !== '443') {
+    throw new Error('AMFS API Base 仅允许 443 端口');
+  }
+
+  const domain = parsed.hostname.toLowerCase();
+  const trusted = TRUSTED_AMFS_DOMAINS.some((trustedDomain) =>
+    isTrustedDomain(domain, trustedDomain),
+  );
+  if (!trusted) {
+    throw new Error('AMFS API Base 域名不在白名单内');
+  }
+
+  return parsed.origin;
+};
+
+const loadAmfsSdk = (apiBase) => {
+  if (window.AmeFingerprint) {
+    return Promise.resolve();
+  }
+  if (amfsSdkLoadPromise) {
+    return amfsSdkLoadPromise;
+  }
+  amfsSdkLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `${removeTrailingSlash(apiBase)}/sdk/fp.min.js`;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('AMFS SDK 加载失败'));
+    document.head.appendChild(script);
+  });
+  return amfsSdkLoadPromise;
+};
+
+export const getAmfsCaptchaToken = async ({
+  apiBase,
+  siteId,
+  scene = 'login',
+  userId,
+}) => {
+  if (!apiBase || !siteId) {
+    throw new Error('AMFS 配置不完整');
+  }
+  const normalizedApiBase = normalizeAndValidateAmfsApiBase(apiBase);
+  await loadAmfsSdk(normalizedApiBase);
+  if (!window.AmeFingerprint) {
+    throw new Error('AMFS SDK 不可用');
+  }
+
+  const initKey = `${normalizedApiBase}::${siteId}`;
+  if (amfsInitializedKey !== initKey) {
+    window.AmeFingerprint.init({
+      siteId,
+      apiBase: normalizedApiBase,
+      wasmBase: `${removeTrailingSlash(normalizedApiBase)}/cdn/wasm`,
+      debug: false,
+    });
+    amfsInitializedKey = initKey;
+  }
+
+  const risk = await window.AmeFingerprint.getRisk({
+    scene,
+    userId,
+  });
+  return (
+    risk?.eventId || risk?.eventID || risk?.event_id || risk?.requestId || ''
+  );
 };
 
 export function verifyJSONPromise(value) {

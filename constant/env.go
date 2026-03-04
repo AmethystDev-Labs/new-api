@@ -24,3 +24,7 @@ var TaskPricePatches []string
 // TrustedRedirectDomains is a list of trusted domains for redirect URL validation.
 // Domains support subdomain matching (e.g., "example.com" matches "sub.example.com").
 var TrustedRedirectDomains []string
+
+// TrustedAMFSDomains is the allowlist for AMFS base URL validation.
+// Keep this list strict to avoid XSS/SSRF by loading or calling untrusted hosts.
+var TrustedAMFSDomains = []string{"amfs.amethyst.ltd"}

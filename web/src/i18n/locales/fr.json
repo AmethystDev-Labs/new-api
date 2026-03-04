@@ -3158,6 +3158,12 @@
     "验证码提供商": "Fournisseur de captcha",
     "hCaptcha Site Key": "Clé du site hCaptcha",
     "hCaptcha Secret Key": "Clé secrète hCaptcha",
+    "AMFS API Base": "Base API AMFS",
+    "例如：https://amfs.amethyst.ltd": "Par exemple : https://amfs.amethyst.ltd",
+    "AMFS Site ID": "Site ID AMFS",
+    "AMFS 分数阈值（0-100）": "Seuil de score AMFS (0-100)",
+    "AMFS 超时时间（毫秒）": "Délai d'expiration AMFS (millisecondes)",
+    "AMFS 失败时放行（Fail Open）": "Autoriser en cas d'échec AMFS (Fail Open)",
     "保存验证码设置": "Enregistrer les paramètres du captcha",
     "请稍后几秒重试，验证码正在检查用户环境！": "Veuillez réessayer dans quelques secondes, le captcha vérifie l'environnement utilisateur !",
     "验证码已启用但 Site Key 为空。": "Le captcha est activé mais la clé de site est vide."

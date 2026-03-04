@@ -40,6 +40,7 @@ import {
   buildAssertionResult,
   isPasskeySupported,
   getCaptchaQueryString,
+  getAmfsCaptchaToken,
 } from '../../helpers';
 import CaptchaWidget from '../common/captcha/CaptchaWidget';
 import {
@@ -114,6 +115,7 @@ const LoginForm = () => {
   const githubTimeoutRef = useRef(null);
   const githubButtonText = t(githubButtonTextKeyByState[githubButtonState]);
   const [customOAuthLoading, setCustomOAuthLoading] = useState({});
+  const isAmfsCaptcha = captchaProvider === 'amfs';
 
   const logo = getLogo();
   const systemName = getSystemName();
@@ -146,15 +148,20 @@ const LoginForm = () => {
   );
 
   useEffect(() => {
-    const isCaptchaEnabled = status?.captcha_check ?? status?.turnstile_check;
+    const isCaptchaEnabled =
+      status?.amfs_login_check ??
+      status?.captcha_check ??
+      status?.turnstile_check;
     if (isCaptchaEnabled) {
       setCaptchaEnabled(true);
       setCaptchaSiteKey(status.captcha_site_key || status.turnstile_site_key);
       setCaptchaProvider(status.captcha_provider || 'turnstile');
+      setCaptchaToken('');
     } else {
       setCaptchaEnabled(false);
       setCaptchaSiteKey('');
       setCaptchaProvider('turnstile');
+      setCaptchaToken('');
     }
 
     // 从 status 获取用户协议和隐私政策的启用状态
@@ -191,7 +198,7 @@ const LoginForm = () => {
   };
 
   const onSubmitWeChatVerificationCode = async () => {
-    if (captchaEnabled && captchaToken === '') {
+    if (captchaEnabled && !isAmfsCaptcha && captchaToken === '') {
       showInfo(t('请稍后几秒重试，验证码正在检查用户环境！'));
       return;
     }
@@ -223,20 +230,41 @@ const LoginForm = () => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
   }
 
+  const resolveLoginCaptchaToken = async () => {
+    if (!captchaEnabled) {
+      return '';
+    }
+    if (!isAmfsCaptcha) {
+      return captchaToken;
+    }
+    const eventId = await getAmfsCaptchaToken({
+      apiBase: status.amfs_api_base,
+      siteId: status.amfs_site_id,
+      scene: 'login',
+      userId: username || '',
+    });
+    if (!eventId) {
+      throw new Error('AMFS eventId 为空');
+    }
+    setCaptchaToken(eventId);
+    return eventId;
+  };
+
   async function handleSubmit(e) {
     if ((hasUserAgreement || hasPrivacyPolicy) && !agreedToTerms) {
       showInfo(t('请先阅读并同意用户协议和隐私政策'));
-      return;
-    }
-    if (captchaEnabled && captchaToken === '') {
-      showInfo(t('请稍后几秒重试，验证码正在检查用户环境！'));
       return;
     }
     setSubmitted(true);
     setLoginLoading(true);
     try {
       if (username && password) {
-        const captchaQuery = getCaptchaQueryString(captchaToken, captchaProvider);
+        const token = await resolveLoginCaptchaToken();
+        if (captchaEnabled && token === '') {
+          showInfo(t('请稍后几秒重试，验证码正在检查用户环境！'));
+          return;
+        }
+        const captchaQuery = getCaptchaQueryString(token, captchaProvider);
         const loginUrl = captchaQuery
           ? `/api/user/login?${captchaQuery}`
           : '/api/user/login';
@@ -977,7 +1005,7 @@ const LoginForm = () => {
         {renderWeChatLoginModal()}
         {render2FAModal()}
 
-        {captchaEnabled && (
+        {captchaEnabled && !isAmfsCaptcha && (
           <div className='flex justify-center mt-6'>
             <CaptchaWidget
               provider={captchaProvider}

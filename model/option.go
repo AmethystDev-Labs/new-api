@@ -106,6 +106,11 @@ func InitOptionMap() {
 	common.OptionMap["TurnstileSecretKey"] = ""
 	common.OptionMap["HCaptchaSiteKey"] = ""
 	common.OptionMap["HCaptchaSecretKey"] = ""
+	common.OptionMap["AMFSApiBase"] = common.AMFSApiBase
+	common.OptionMap["AMFSSiteID"] = common.AMFSSiteID
+	common.OptionMap["AMFSScoreThreshold"] = strconv.Itoa(common.AMFSScoreThreshold)
+	common.OptionMap["AMFSTimeoutMs"] = strconv.Itoa(common.AMFSTimeoutMs)
+	common.OptionMap["AMFSFailOpen"] = strconv.FormatBool(common.AMFSFailOpen)
 	common.OptionMap["QuotaForNewUser"] = strconv.Itoa(common.QuotaForNewUser)
 	common.OptionMap["QuotaForInviter"] = strconv.Itoa(common.QuotaForInviter)
 	common.OptionMap["QuotaForInvitee"] = strconv.Itoa(common.QuotaForInvitee)
@@ -392,6 +397,8 @@ func updateOptionMap(key string, value string) (err error) {
 	case "CaptchaProvider":
 		if value == "hcaptcha" {
 			common.CaptchaProvider = "hcaptcha"
+		} else if value == "amfs" {
+			common.CaptchaProvider = "amfs"
 		} else {
 			common.CaptchaProvider = "turnstile"
 		}
@@ -403,6 +410,16 @@ func updateOptionMap(key string, value string) (err error) {
 		common.HCaptchaSiteKey = value
 	case "HCaptchaSecretKey":
 		common.HCaptchaSecretKey = value
+	case "AMFSApiBase":
+		common.AMFSApiBase = value
+	case "AMFSSiteID":
+		common.AMFSSiteID = value
+	case "AMFSScoreThreshold":
+		common.AMFSScoreThreshold, _ = strconv.Atoi(value)
+	case "AMFSTimeoutMs":
+		common.AMFSTimeoutMs, _ = strconv.Atoi(value)
+	case "AMFSFailOpen":
+		common.AMFSFailOpen = value == "true"
 	case "QuotaForNewUser":
 		common.QuotaForNewUser, _ = strconv.Atoi(value)
 	case "QuotaForInviter":

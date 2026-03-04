@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -125,12 +126,28 @@ func UpdateOption(c *gin.Context) {
 				})
 				return
 			}
-			if common.CaptchaProvider != "hcaptcha" && common.TurnstileSiteKey == "" {
+			if common.CaptchaProvider == "turnstile" && common.TurnstileSiteKey == "" {
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,
 					"message": "无法启用 Turnstile 校验，请先填入 Turnstile 校验相关配置信息！",
 				})
 				return
+			}
+			if common.CaptchaProvider == "amfs" {
+				if _, validateErr := common.ValidateAMFSBaseURL(common.AMFSApiBase); validateErr != nil {
+					c.JSON(http.StatusOK, gin.H{
+						"success": false,
+						"message": "AMFS API Base 无效：" + validateErr.Error(),
+					})
+					return
+				}
+				if common.AMFSApiBase == "" || common.AMFSSiteID == "" {
+					c.JSON(http.StatusOK, gin.H{
+						"success": false,
+						"message": "无法启用 AMFS 校验，请先填入 AMFS API Base 与 Site ID！",
+					})
+					return
+				}
 			}
 		}
 	case "CaptchaProvider":
@@ -145,6 +162,65 @@ func UpdateOption(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无法切换到 Turnstile，请先填入 Turnstile 校验相关配置信息！",
+			})
+			return
+		}
+		if option.Value == "amfs" && common.TurnstileCheckEnabled && (common.AMFSApiBase == "" || common.AMFSSiteID == "") {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "无法切换到 AMFS，请先填入 AMFS API Base 与 Site ID！",
+			})
+			return
+		}
+		if option.Value == "amfs" {
+			if _, validateErr := common.ValidateAMFSBaseURL(common.AMFSApiBase); validateErr != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "AMFS API Base 无效：" + validateErr.Error(),
+				})
+				return
+			}
+		}
+	case "AMFSApiBase":
+		normalizedBase, validateErr := common.ValidateAMFSBaseURL(option.Value.(string))
+		if validateErr != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "AMFS API Base 无效：" + validateErr.Error(),
+			})
+			return
+		}
+		option.Value = normalizedBase
+		if common.TurnstileCheckEnabled && common.CaptchaProvider == "amfs" && strings.TrimSpace(option.Value.(string)) == "" {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "AMFS 已启用，AMFS API Base 不能为空！",
+			})
+			return
+		}
+	case "AMFSSiteID":
+		if common.TurnstileCheckEnabled && common.CaptchaProvider == "amfs" && strings.TrimSpace(option.Value.(string)) == "" {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "AMFS 已启用，Site ID 不能为空！",
+			})
+			return
+		}
+	case "AMFSScoreThreshold":
+		threshold, parseErr := strconv.Atoi(strings.TrimSpace(option.Value.(string)))
+		if parseErr != nil || threshold < 0 || threshold > 100 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "AMFS 分数阈值必须是 0 到 100 的整数！",
+			})
+			return
+		}
+	case "AMFSTimeoutMs":
+		timeoutMs, parseErr := strconv.Atoi(strings.TrimSpace(option.Value.(string)))
+		if parseErr != nil || timeoutMs < 500 || timeoutMs > 60000 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "AMFS 超时时间必须是 500 到 60000 毫秒！",
 			})
 			return
 		}

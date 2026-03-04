@@ -83,6 +83,11 @@ const SystemSetting = () => {
     TurnstileSecretKey: '',
     HCaptchaSiteKey: '',
     HCaptchaSecretKey: '',
+    AMFSApiBase: '',
+    AMFSSiteID: '',
+    AMFSScoreThreshold: 70,
+    AMFSTimeoutMs: 5000,
+    AMFSFailOpen: true,
     RegisterEnabled: '',
     'passkey.enabled': '',
     'passkey.rp_display_name': '',
@@ -191,6 +196,7 @@ const SystemSetting = () => {
           case 'passkey.enabled':
           case 'passkey.allow_insecure_origin':
           case 'WorkerAllowHttpImageRequestEnabled':
+          case 'AMFSFailOpen':
             item.value = toBoolean(item.value);
             break;
           case 'passkey.origins':
@@ -210,6 +216,10 @@ const SystemSetting = () => {
           case 'Price':
           case 'MinTopUp':
             item.value = parseFloat(item.value);
+            break;
+          case 'AMFSScoreThreshold':
+          case 'AMFSTimeoutMs':
+            item.value = parseInt(item.value, 10);
             break;
           default:
             break;
@@ -620,6 +630,36 @@ const SystemSetting = () => {
       options.push({
         key: 'HCaptchaSecretKey',
         value: inputs.HCaptchaSecretKey,
+      });
+    }
+    if (originInputs['AMFSApiBase'] !== inputs.AMFSApiBase) {
+      options.push({ key: 'AMFSApiBase', value: inputs.AMFSApiBase });
+    }
+    if (originInputs['AMFSSiteID'] !== inputs.AMFSSiteID) {
+      options.push({ key: 'AMFSSiteID', value: inputs.AMFSSiteID });
+    }
+    if (
+      originInputs['AMFSScoreThreshold'] !== inputs.AMFSScoreThreshold &&
+      inputs.AMFSScoreThreshold !== ''
+    ) {
+      options.push({
+        key: 'AMFSScoreThreshold',
+        value: inputs.AMFSScoreThreshold,
+      });
+    }
+    if (
+      originInputs['AMFSTimeoutMs'] !== inputs.AMFSTimeoutMs &&
+      inputs.AMFSTimeoutMs !== ''
+    ) {
+      options.push({
+        key: 'AMFSTimeoutMs',
+        value: inputs.AMFSTimeoutMs,
+      });
+    }
+    if (originInputs['AMFSFailOpen'] !== inputs.AMFSFailOpen) {
+      options.push({
+        key: 'AMFSFailOpen',
+        value: inputs.AMFSFailOpen ? 'true' : 'false',
       });
     }
 
@@ -1631,6 +1671,7 @@ const SystemSetting = () => {
                         optionList={[
                           { label: 'Turnstile', value: 'turnstile' },
                           { label: 'hCaptcha', value: 'hcaptcha' },
+                          { label: 'AMFS', value: 'amfs' },
                         ]}
                         onChange={(value) => {
                           setInputs((prev) => ({
@@ -1671,6 +1712,44 @@ const SystemSetting = () => {
                         type='password'
                         placeholder={t('敏感信息不会发送到前端显示')}
                       />
+                    </Col>
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Input
+                        field='AMFSApiBase'
+                        label={t('AMFS API Base')}
+                        placeholder={t('例如：https://amfs.amethyst.ltd')}
+                      />
+                    </Col>
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Input
+                        field='AMFSSiteID'
+                        label={t('AMFS Site ID')}
+                      />
+                    </Col>
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.InputNumber
+                        field='AMFSScoreThreshold'
+                        label={t('AMFS 分数阈值（0-100）')}
+                        min={0}
+                        max={100}
+                      />
+                    </Col>
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.InputNumber
+                        field='AMFSTimeoutMs'
+                        label={t('AMFS 超时时间（毫秒）')}
+                        min={500}
+                        max={60000}
+                      />
+                    </Col>
+                    <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+                      <Form.Checkbox
+                        field='AMFSFailOpen'
+                        noLabel
+                        onChange={(e) => handleCheckboxChange('AMFSFailOpen', e)}
+                      >
+                        {t('AMFS 失败时放行（Fail Open）')}
+                      </Form.Checkbox>
                     </Col>
                   </Row>
                   <Button onClick={submitCaptchaSettings}>

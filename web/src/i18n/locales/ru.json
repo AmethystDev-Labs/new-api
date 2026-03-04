@@ -3172,6 +3172,12 @@
     "验证码提供商": "Провайдер captcha",
     "hCaptcha Site Key": "Ключ сайта hCaptcha",
     "hCaptcha Secret Key": "Секретный ключ hCaptcha",
+    "AMFS API Base": "AMFS API Base",
+    "例如：https://amfs.amethyst.ltd": "Например: https://amfs.amethyst.ltd",
+    "AMFS Site ID": "AMFS Site ID",
+    "AMFS 分数阈值（0-100）": "Порог балла AMFS (0-100)",
+    "AMFS 超时时间（毫秒）": "Таймаут AMFS (мс)",
+    "AMFS 失败时放行（Fail Open）": "Пропускать при сбое AMFS (Fail Open)",
     "保存验证码设置": "Сохранить настройки captcha",
     "请稍后几秒重试，验证码正在检查用户环境！": "Пожалуйста, повторите попытку через несколько секунд, captcha проверяет среду пользователя!",
     "验证码已启用但 Site Key 为空。": "Captcha включена, но ключ сайта пуст."
