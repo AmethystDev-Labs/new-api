@@ -24,6 +24,7 @@ import {
   renderModelTag,
   stringToColor,
   calculateModelPrice,
+  getModelPriceItems,
   getLobeHubIcon,
 } from '../../../../../helpers';
 import {
@@ -231,26 +232,18 @@ export const getPricingTableColumns = ({
     ...(isMobile ? {} : { fixed: 'right' }),
     render: (text, record, index) => {
       const priceData = getPriceData(record);
+      const priceItems = getModelPriceItems(priceData, t);
 
-      if (priceData.isPerToken) {
-        return (
-          <div className='space-y-1'>
-            <div className='text-gray-700'>
-              {t('输入')} {priceData.inputPrice} / 1{priceData.unitLabel} tokens
+      return (
+        <div className='space-y-1'>
+          {priceItems.map((item) => (
+            <div key={item.key} className='text-gray-700'>
+              {item.label} {item.value}
+              {item.suffix}
             </div>
-            <div className='text-gray-700'>
-              {t('输出')} {priceData.completionPrice} / 1{priceData.unitLabel}{' '}
-              tokens
-            </div>
-          </div>
-        );
-      } else {
-        return (
-          <div className='text-gray-700'>
-            {t('模型价格')}：{priceData.price}
-          </div>
-        );
-      }
+          ))}
+        </div>
+      );
     },
   };
 
