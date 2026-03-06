@@ -152,7 +152,12 @@ export const useLogsData = () => {
 
   const getInitialBillingDisplayMode = () => {
     const savedMode = localStorage.getItem(BILLING_DISPLAY_MODE_STORAGE_KEY);
-    return savedMode === 'price' || savedMode === 'ratio' ? savedMode : 'price';
+    if (savedMode === 'price' || savedMode === 'ratio') {
+      return savedMode;
+    }
+    return localStorage.getItem('quota_display_type') === 'TOKENS'
+      ? 'ratio'
+      : 'price';
   };
 
   // Column visibility state

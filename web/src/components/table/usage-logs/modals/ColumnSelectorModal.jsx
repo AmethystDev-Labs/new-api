@@ -36,6 +36,10 @@ const ColumnSelectorModal = ({
   showUserInfoFunc,
   t,
 }) => {
+  const isTokensDisplay =
+    typeof localStorage !== 'undefined' &&
+    localStorage.getItem('quota_display_type') === 'TOKENS';
+
   // Get all columns for display in selector
   const allColumns = getLogsColumns({
     t,
@@ -71,8 +75,12 @@ const ColumnSelectorModal = ({
             value={billingDisplayMode}
             onChange={(event) => setBillingDisplayMode(event.target.value)}
           >
-            <Radio value='price'>{t('价格模式（默认）')}</Radio>
-            <Radio value='ratio'>{t('倍率模式')}</Radio>
+            <Radio value='price'>
+              {isTokensDisplay ? t('价格模式') : t('价格模式（默认）')}
+            </Radio>
+            <Radio value='ratio'>
+              {isTokensDisplay ? t('倍率模式（默认）') : t('倍率模式')}
+            </Radio>
           </RadioGroup>
         </div>
         <Checkbox
