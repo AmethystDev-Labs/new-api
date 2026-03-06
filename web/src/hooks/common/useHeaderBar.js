@@ -25,6 +25,7 @@ import { StatusContext } from '../../context/Status';
 import { useSetTheme, useTheme, useActualTheme } from '../../context/Theme';
 import { API } from '../../helpers/api';
 import { getLogo, getSystemName, showSuccess } from '../../helpers/utils';
+import { normalizeLanguage } from '../../i18n/language';
 import { useIsMobile } from './useIsMobile';
 import { useSidebarCollapsed } from './useSidebarCollapsed';
 import { useMinimumLoadingTime } from './useMinimumLoadingTime';
@@ -37,7 +38,7 @@ export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
   const [logoLoaded, setLogoLoaded] = useState(false);
   const navigate = useNavigate();
-  const [currentLang, setCurrentLang] = useState(i18n.language);
+  const [currentLang, setCurrentLang] = useState(normalizeLanguage(i18n.language));
   const location = useLocation();
 
   const loading = statusState?.status === undefined;
@@ -119,12 +120,13 @@ export const useHeaderBar = ({ onMobileMenuToggle, drawerOpen }) => {
   // Language change effect
   useEffect(() => {
     const handleLanguageChanged = (lng) => {
-      setCurrentLang(lng);
+      const normalizedLang = normalizeLanguage(lng);
+      setCurrentLang(normalizedLang);
       try {
         const iframe = document.querySelector('iframe');
         const cw = iframe && iframe.contentWindow;
         if (cw) {
-          cw.postMessage({ lang: lng }, '*');
+          cw.postMessage({ lang: normalizedLang }, '*');
         }
       } catch (e) {
         // Silently ignore cross-origin or access errors

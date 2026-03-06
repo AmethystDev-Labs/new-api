@@ -33,6 +33,7 @@ import { setStatusData } from '../../helpers/data';
 import { UserContext } from '../../context/User';
 import { StatusContext } from '../../context/Status';
 import { useLocation } from 'react-router-dom';
+import { normalizeLanguage } from '../../i18n/language';
 const { Sider, Content, Header } = Layout;
 
 const PageLayout = () => {
@@ -111,7 +112,11 @@ const PageLayout = () => {
     }
     const savedLang = localStorage.getItem('i18nextLng');
     if (savedLang) {
-      i18n.changeLanguage(savedLang);
+      const normalizedLang = normalizeLanguage(savedLang);
+      if (normalizedLang !== savedLang) {
+        localStorage.setItem('i18nextLng', normalizedLang);
+      }
+      i18n.changeLanguage(normalizedLang);
     }
   }, [i18n]);
 
