@@ -123,7 +123,6 @@ const FilterModalContent = ({ sidebarProps, t }) => {
         t={t}
       />
 
-
       <PricingEndpointTypes
         filterEndpointType={filterEndpointType}
         setFilterEndpointType={setFilterEndpointType}
