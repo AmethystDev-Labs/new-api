@@ -73,7 +73,7 @@ const ColumnSelectorModal = ({
           <RadioGroup
             type='button'
             value={billingDisplayMode}
-            onChange={(event) => setBillingDisplayMode(event.target.value)}
+            onChange={(value) => setBillingDisplayMode(value)}
           >
             <Radio value='price'>
               {isTokensDisplay ? t('价格模式') : t('价格模式（默认）')}
