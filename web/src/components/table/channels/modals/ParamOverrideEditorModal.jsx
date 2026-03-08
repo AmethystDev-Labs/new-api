@@ -163,7 +163,7 @@ const MODE_DESCRIPTIONS = {
   prune_objects: '按条件清理对象中的子项',
   pass_headers: '把指定请求头透传到上游请求',
   sync_fields: '在一个字段有值、另一个缺失时自动补齐',
-  set_header: '设置运行期请求头（支持整值覆盖，或用 JSON 映射按逗号 token 替换/删除）',
+  set_header: '设置运行期请求头（支持整值覆盖，或用 JSON 映射按逗号 token 替换/删除/追加/白名单保留）',
   delete_header: '删除运行期请求头',
   copy_header: '复制请求头',
   move_header: '移动请求头',
@@ -241,6 +241,12 @@ const getModeValuePlaceholder = (mode) => {
       '',
       'JSON map wildcard:',
       '{"*": null, "computer-use-2025-11-24": "computer-use-2025-11-24"}',
+      '',
+      'JSON append example:',
+      '{"$append": ["context-1m-2025-08-07"]}',
+      '',
+      'JSON strict keep example:',
+      '{"computer-use-2025-01-24": "computer-use-2025-01-24", "$append": ["context-1m-2025-08-07"], "$keep_only_declared": true}',
     ].join('\n');
   }
   if (mode === 'pass_headers') return 'Authorization, X-Request-Id';
@@ -260,7 +266,7 @@ const getModeValuePlaceholder = (mode) => {
 
 const getModeValueHelp = (mode) => {
   if (mode !== 'set_header') return '';
-  return '字符串：整条请求头直接覆盖。JSON 映射：按逗号分隔 token 逐项处理，null 表示删除，string/array 表示替换，* 表示兜底规则。';
+  return '字符串：整条请求头直接覆盖。JSON 映射：按逗号分隔 token 逐项处理，null 表示删除，string/array 表示替换，* 表示兜底规则，$append 可在末尾追加新 token，$keep_only_declared=true 时会丢弃未声明 token。';
 };
 
 const SYNC_TARGET_TYPE_OPTIONS = [
