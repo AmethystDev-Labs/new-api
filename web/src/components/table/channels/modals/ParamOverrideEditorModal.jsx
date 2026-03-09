@@ -375,6 +375,7 @@ const AWS_BEDROCK_ANTHROPIC_COMPAT_TEMPLATE = {
         'tool-search-tool-2025-10-19': 'tool-search-tool-2025-10-19',
         'web-fetch-2025-09-10': null,
         'web-search-2025-03-05': null,
+        'oauth-2025-04-20': null
       },
     },
     {
