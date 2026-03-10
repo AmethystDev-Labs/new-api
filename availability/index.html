@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Availability Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --accent: #3b82f6;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .badge {
+            background: var(--accent);
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 12px;
+        }
+        
+        .model-list {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        
+        .model-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .model-item:last-child { border-bottom: none; }
+        .model-item:hover { background: rgba(255, 255, 255, 0.05); }
+        
+        .model-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+        
+        .model-card {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .model-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        
+        .model-card-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+        
+        .model-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        
+        .tag {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .tag.thinking {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+        
+        .tag.vision {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+        
+        .tag.unavailable {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+        
+        .model-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .fast { color: var(--success); }
+        .medium { color: var(--warning); }
+        .slow { color: var(--error); }
+        
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .search-input {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            width: 250px;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .filter-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-card);
+            border: 1px solid var(--accent);
+            padding: 12px 20px;
+            border-radius: 8px;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8rem; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .search-input { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Model Availability Report</h1>
+            <p class="subtitle" id="timestamp">Loading...</p>
+        </header>
+        
+        <div class="stats-grid" id="statsGrid"></div>
+        
+        <section class="section">
+            <h2 class="section-title">
+                <span>🧠</span> Thinking Models
+                <span class="badge" id="thinkingCount">0</span>
+            </h2>
+            <div class="model-list" id="thinkingList"></div>
+        </section>
+        
+        <section class="section">
+            <h2 class="section-title">
+                <span>👁️</span> Vision Models
+                <span class="badge" id="visionCount">0</span>
+            </h2>
+            <div class="model-list" id="visionList"></div>
+        </section>
+        
+        <section class="section">
+            <h2 class="section-title">
+                <span>📋</span> All Models
+                <span class="badge" id="totalCount">0</span>
+            </h2>
+            <div class="controls">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search models...">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="available">Available</button>
+                <button class="filter-btn" data-filter="thinking">Thinking</button>
+                <button class="filter-btn" data-filter="vision">Vision</button>
+            </div>
+            <div class="model-grid" id="modelGrid"></div>
+        </section>
+    </div>
+    
+    <div class="toast" id="toast">Copied!</div>
+
+    <script>
+        let modelsData = [];
+        let currentFilter = 'all';
+        
+        async function loadData() {
+            try {
+                const response = await fetch('results.json');
+                const data = await response.json();
+                modelsData = data;
+                renderDashboard(data);
+            } catch (error) {
+                document.getElementById('timestamp').textContent = 'Failed to load results.json';
+                console.error('Failed to load data:', error);
+            }
+        }
+        
+        function renderDashboard(data) {
+            document.getElementById('timestamp').textContent = 
+                `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
+            
+            renderStats(data);
+            renderThinkingList(data.thinkingModels); // 思考模型列表
+            renderVisionList(data.visionModels); // 多模态模型列表
+            renderModelGrid(data.models);
+        }
+        
+        function renderStats(data) {
+            const total = data.total;
+            const available = data.available;
+            const unavailable = total - available;
+            const thinking = data.thinkingModels.length; // 思考模型数量
+            const vision = data.visionModels.length; // 多模态模型数量
+            
+            const stats = [
+                { icon: '📊', value: total, label: 'Total' },
+                { icon: '✅', value: available, label: 'Available' },
+                { icon: '🧠', value: thinking, label: 'Thinking' },
+                { icon: '👁️', value: vision, label: 'Vision' },
+                { icon: '❌', value: unavailable, label: 'Unavailable' }
+            ];
+            
+            document.getElementById('statsGrid').innerHTML = stats.map(s => `
+                <div class="stat-card">
+                    <div class="stat-icon">${s.icon}</div>
+                    <div class="stat-value">${s.value}</div>
+                    <div class="stat-label">${s.label}</div>
+                </div>
+            `).join('');
+        }
+        
+        function renderThinkingList(models) {
+            document.getElementById('thinkingCount').textContent = models.length;
+            document.getElementById('thinkingList').innerHTML = models.map(m => `
+                <div class="model-item" onclick="copyModel('${m}')">
+                    <span class="model-name"><span>🧠</span> ${m}</span>
+                    <span style="color: var(--text-secondary); font-size: 0.8rem;">click to copy</span>
+                </div>
+            `).join('');
+        }
+        
+        function renderVisionList(models) {
+            document.getElementById('visionCount').textContent = models.length;
+            document.getElementById('visionList').innerHTML = models.map(m => `
+                <div class="model-item" onclick="copyModel('${m}')">
+                    <span class="model-name"><span>👁️</span> ${m}</span>
+                    <span style="color: var(--text-secondary); font-size: 0.8rem;">click to copy</span>
+                </div>
+            `).join('');
+        }
+        
+        function renderModelGrid(models) {
+            document.getElementById('totalCount').textContent = models.length;
+            
+            const filtered = models.filter(m => {
+                if (currentFilter === 'all') return true;
+                if (currentFilter === 'available') return m.available;
+                if (currentFilter === 'thinking') return m.isThinking; // 是否思考模型
+                if (currentFilter === 'vision') return m.supportsVision; // 是否多模态
+                return true;
+            });
+            
+            document.getElementById('modelGrid').innerHTML = filtered.map(m => {
+                const timeClass = m.responseTime < 1 ? 'fast' : m.responseTime < 5 ? 'medium' : 'slow'; // 响应时间分类
+                return `
+                    <div class="model-card" onclick="copyModel('${m.model}')">
+                        <div class="model-card-name">${m.model}</div>
+                        <div class="model-tags">
+                            ${m.isThinking ? '<span class="tag thinking">Thinking</span>' : ''} <!-- 思考模型标签 -->
+                            ${m.supportsVision ? '<span class="tag vision">Vision</span>' : ''} <!-- 多模态标签 -->
+                            ${!m.available ? '<span class="tag unavailable">Unavailable</span>' : ''}
+                        </div>
+                        <div class="model-meta">
+                            <span>${m.available ? '✅ OK' : '❌ ' + (m.error || 'N/A')}</span>
+                            ${m.responseTime ? `<span class="${timeClass}">⚡ ${m.responseTime.toFixed(1)}s</span>` : ''} <!-- 响应时间 -->
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function copyModel(name) {
+            navigator.clipboard.writeText(name).then(() => {
+                const toast = document.getElementById('toast');
+                toast.textContent = `Copied: ${name}`;
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2000);
+            });
+        }
+        
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            document.querySelectorAll('.model-card').forEach(card => {
+                const name = card.querySelector('.model-card-name').textContent.toLowerCase();
+                card.style.display = name.includes(query) ? '' : 'none';
+            });
+        });
+        
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderModelGrid(modelsData.models);
+            });
+        });
+        
+        loadData();
+    </script>
+</body>
+</html>
