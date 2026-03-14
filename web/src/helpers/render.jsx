@@ -1189,7 +1189,7 @@ function getEffectiveRatio(groupRatio, user_group_ratio) {
   const useUserGroupRatio = isValidGroupRatio(user_group_ratio);
   const ratioLabel = useUserGroupRatio
     ? i18next.t('专属倍率')
-    : i18next.t('分组倍率');
+    : i18next.t('分组');
   const effectiveRatio = useUserGroupRatio ? user_group_ratio : groupRatio;
 
   return {
