@@ -32,4 +32,3 @@ Please fill this in, for example: `v1.0.0`
 **Expected Result**
 
 **Related Screenshots**
-If none, please delete this section.
