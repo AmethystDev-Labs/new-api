@@ -897,6 +897,10 @@ export const getLogsColumns = ({
             <Typography.Paragraph
               ellipsis={{
                 rows: 2,
+                showTooltip: {
+                  type: 'popover',
+                  opts: { style: { width: 240 } },
+                },
               }}
               style={{ maxWidth: 200, marginBottom: 0 }}
             >
