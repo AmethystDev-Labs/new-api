@@ -22,8 +22,7 @@ import {
   Modal,
   Button,
   Empty,
-  Space,
-  Tag,
+  Divider,
   Typography,
 } from '@douyinfe/semi-ui';
 import { IconCopy } from '@douyinfe/semi-icons';
@@ -35,59 +34,66 @@ const parseAuditLine = (line) => {
   if (typeof line !== 'string') {
     return null;
   }
-  const colonIndex = line.indexOf(': ');
-  const arrowIndex = line.indexOf(' -> ', colonIndex + 2);
-  if (colonIndex <= 0 || arrowIndex <= colonIndex) {
-    return null;
+  const firstSpaceIndex = line.indexOf(' ');
+  if (firstSpaceIndex <= 0) {
+    return { action: line, content: line };
   }
-
   return {
-    field: line.slice(0, colonIndex),
-    before: line.slice(colonIndex + 2, arrowIndex),
-    after: line.slice(arrowIndex + 4),
-    raw: line,
+    action: line.slice(0, firstSpaceIndex),
+    content: line.slice(firstSpaceIndex + 1),
   };
 };
 
-const ValuePanel = ({ label, value, tone }) => (
-  <div
-    style={{
-      flex: 1,
-      minWidth: 0,
-      padding: 12,
-      borderRadius: 12,
-      border: '1px solid var(--semi-color-border)',
-      background:
-        tone === 'after'
-          ? 'rgba(var(--semi-blue-5), 0.08)'
-          : 'var(--semi-color-fill-0)',
-    }}
-  >
-    <div
-      style={{
-        marginBottom: 6,
-        fontSize: 12,
-        fontWeight: 600,
-        color: 'var(--semi-color-text-2)',
-      }}
-    >
-      {label}
-    </div>
-    <Text
-      style={{
-        display: 'block',
-        fontFamily:
-          'ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace',
-        fontSize: 13,
-        lineHeight: 1.65,
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-      }}
-    >
-      {value}
-    </Text>
-  </div>
-);
+const getActionLabel = (action, t) => {
+  switch ((action || '').toLowerCase()) {
+    case 'set':
+      return t('设置');
+    case 'delete':
+      return t('删除');
+    case 'copy':
+      return t('复制');
+    case 'move':
+      return t('移动');
+    case 'append':
+      return t('追加');
+    case 'prepend':
+      return t('前置');
+    case 'trim_prefix':
+      return t('去前缀');
+    case 'trim_suffix':
+      return t('去后缀');
+    case 'ensure_prefix':
+      return t('保前缀');
+    case 'ensure_suffix':
+      return t('保后缀');
+    case 'trim_space':
+      return t('去空格');
+    case 'to_lower':
+      return t('转小写');
+    case 'to_upper':
+      return t('转大写');
+    case 'replace':
+      return t('替换');
+    case 'regex_replace':
+      return t('正则替换');
+    case 'set_header':
+      return t('设请求头');
+    case 'delete_header':
+      return t('删请求头');
+    case 'copy_header':
+      return t('复制请求头');
+    case 'move_header':
+      return t('移动请求头');
+    case 'pass_headers':
+      return t('透传请求头');
+    case 'sync_fields':
+      return t('同步字段');
+    case 'return_error':
+      return t('返回错误');
+    default:
+      return action;
+  }
+};
 
 const ParamOverrideModal = ({
   showParamOverrideModal,
@@ -124,147 +130,135 @@ const ParamOverrideModal = ({
       centered
       closable
       maskClosable
-      width={760}
+      width={640}
     >
-      <div style={{ padding: 20 }}>
+      <div style={{ padding: '8px 20px 20px' }}>
         <div
           style={{
-            marginBottom: 16,
-            padding: 16,
-            borderRadius: 16,
-            background:
-              'linear-gradient(135deg, rgba(var(--semi-blue-5), 0.08), rgba(var(--semi-teal-5), 0.12))',
-            border: '1px solid rgba(var(--semi-blue-5), 0.16)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 12,
+            marginBottom: 10,
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: 12,
-              flexWrap: 'wrap',
-              alignItems: 'flex-start',
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: 18,
-                  fontWeight: 700,
-                  color: 'var(--semi-color-text-0)',
-                  marginBottom: 8,
-                }}
-              >
-                {t('已应用参数覆盖')}
-              </div>
-              <Space wrap spacing={8}>
-                <Tag color='blue' size='large'>
-                  {t('{{count}} 项变更', { count: lines.length })}
-                </Tag>
-                {paramOverrideTarget?.modelName ? (
-                  <Tag color='cyan' size='large'>
-                    {paramOverrideTarget.modelName}
-                  </Tag>
-                ) : null}
-                {paramOverrideTarget?.requestId ? (
-                  <Tag color='grey' size='large'>
-                    {t('Request ID')}: {paramOverrideTarget.requestId}
-                  </Tag>
-                ) : null}
-              </Space>
-            </div>
-
-            <Button
-              icon={<IconCopy />}
-              theme='solid'
-              type='tertiary'
-              onClick={copyAll}
-              disabled={lines.length === 0}
-            >
-              {t('复制全部')}
-            </Button>
-          </div>
-
-          {paramOverrideTarget?.requestPath ? (
-            <div style={{ marginTop: 12 }}>
-              <Text type='tertiary' size='small'>
-                {t('请求路径')}: {paramOverrideTarget.requestPath}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ marginBottom: 4 }}>
+              <Text style={{ fontWeight: 600 }}>
+                {t('{{count}} 项操作', { count: lines.length })}
               </Text>
             </div>
-          ) : null}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 8,
+                fontSize: 12,
+                color: 'var(--semi-color-text-2)',
+              }}
+            >
+              {paramOverrideTarget?.modelName ? (
+                <Text type='tertiary' size='small'>
+                  {paramOverrideTarget.modelName}
+                </Text>
+              ) : null}
+              {paramOverrideTarget?.requestId ? (
+                <Text type='tertiary' size='small'>
+                  {t('Request ID')}: {paramOverrideTarget.requestId}
+                </Text>
+              ) : null}
+              {paramOverrideTarget?.requestPath ? (
+                <Text type='tertiary' size='small'>
+                  {t('请求路径')}: {paramOverrideTarget.requestPath}
+                </Text>
+              ) : null}
+            </div>
+          </div>
+
+          <Button
+            icon={<IconCopy />}
+            theme='borderless'
+            type='tertiary'
+            size='small'
+            onClick={copyAll}
+            disabled={lines.length === 0}
+          >
+            {t('复制')}
+          </Button>
         </div>
+
+        <Divider margin='12px' />
 
         {lines.length === 0 ? (
           <Empty
             description={t('暂无参数覆盖记录')}
-            style={{ padding: '32px 0 12px' }}
+            style={{ padding: '24px 0 8px' }}
           />
         ) : (
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: 12,
-              maxHeight: '60vh',
+              gap: 8,
+              maxHeight: '56vh',
               overflowY: 'auto',
-              paddingRight: 4,
+              paddingRight: 2,
             }}
           >
             {parsedLines.map((item, index) => {
               if (!item) {
-                return (
-                  <div
-                    key={`raw-${index}`}
-                    style={{
-                      padding: 14,
-                      borderRadius: 14,
-                      border: '1px solid var(--semi-color-border)',
-                      background: 'var(--semi-color-fill-0)',
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily:
-                          'ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace',
-                        fontSize: 13,
-                        lineHeight: 1.65,
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {lines[index]}
-                    </Text>
-                  </div>
-                );
+                return null;
               }
 
               return (
                 <div
-                  key={`${item.field}-${index}`}
+                  key={`${item.action}-${index}`}
                   style={{
-                    padding: 14,
-                    borderRadius: 16,
+                    padding: '10px 12px',
+                    borderRadius: 10,
                     border: '1px solid var(--semi-color-border)',
-                    background: 'var(--semi-color-bg-0)',
-                    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.04)',
+                    background: 'var(--semi-color-fill-0)',
+                    display: 'flex',
+                    gap: 12,
+                    alignItems: 'flex-start',
                   }}
                 >
-                  <div style={{ marginBottom: 12 }}>
-                    <Tag color='blue' shape='circle' size='large'>
-                      {item.field}
-                    </Tag>
-                  </div>
                   <div
                     style={{
-                      display: 'flex',
-                      gap: 12,
-                      flexWrap: 'wrap',
-                      alignItems: 'stretch',
+                      flex: '0 0 auto',
+                      minWidth: 74,
                     }}
                   >
-                    <ValuePanel label={t('变更前')} value={item.before} />
-                    <ValuePanel label={t('变更后')} value={item.after} tone='after' />
+                    <Text
+                      style={{
+                        display: 'inline-block',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        lineHeight: '20px',
+                        padding: '0 8px',
+                        borderRadius: 999,
+                        background: 'rgba(var(--semi-blue-5), 0.12)',
+                        color: 'var(--semi-color-primary)',
+                      }}
+                    >
+                      {getActionLabel(item.action, t)}
+                    </Text>
                   </div>
+                  <Text
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      fontFamily:
+                        'ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace',
+                      fontSize: 12,
+                      lineHeight: 1.6,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      color: 'var(--semi-color-text-0)',
+                    }}
+                  >
+                    {item.content}
+                  </Text>
                 </div>
               );
             })}

@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Button, Tag } from '@douyinfe/semi-ui';
+import { Modal } from '@douyinfe/semi-ui';
 import {
   API,
   getTodayStartTimestamp,
@@ -39,6 +39,7 @@ import {
 } from '../../helpers';
 import { ITEMS_PER_PAGE } from '../../constants';
 import { useTableCompactMode } from '../common/useTableCompactMode';
+import ParamOverrideEntry from '../../components/table/usage-logs/components/ParamOverrideEntry';
 
 export const useLogsData = () => {
   const { t } = useTranslation();
@@ -620,30 +621,14 @@ export const useLogsData = () => {
         expandDataLocal.push({
           key: t('参数覆盖'),
           value: (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                flexWrap: 'wrap',
+            <ParamOverrideEntry
+              count={other.po.length}
+              t={t}
+              onOpen={(event) => {
+                event.stopPropagation();
+                openParamOverrideModal(logs[i], other);
               }}
-            >
-              <Tag color='blue' shape='circle'>
-                {t('{{count}} 项变更', { count: other.po.length })}
-              </Tag>
-              <Button
-                theme='borderless'
-                type='primary'
-                size='small'
-                style={{ paddingLeft: 0 }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  openParamOverrideModal(logs[i], other);
-                }}
-              >
-                {t('查看详情')}
-              </Button>
-            </div>
+            />
           ),
         });
       }
