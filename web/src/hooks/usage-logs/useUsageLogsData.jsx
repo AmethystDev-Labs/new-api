@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal } from '@douyinfe/semi-ui';
+import { Modal, Button, Tag } from '@douyinfe/semi-ui';
 import {
   API,
   getTodayStartTimestamp,
@@ -181,6 +181,8 @@ export const useLogsData = () => {
   ] = useState(false);
   const [channelAffinityUsageCacheTarget, setChannelAffinityUsageCacheTarget] =
     useState(null);
+  const [showParamOverrideModal, setShowParamOverrideModal] = useState(false);
+  const [paramOverrideTarget, setParamOverrideTarget] = useState(null);
 
   // Initialize default column visibility
   const initDefaultColumns = () => {
@@ -359,6 +361,20 @@ export const useLogsData = () => {
       key_fp: a.key_fp || '',
     });
     setShowChannelAffinityUsageCacheModal(true);
+  };
+
+  const openParamOverrideModal = (log, other) => {
+    const lines = Array.isArray(other?.po) ? other.po.filter(Boolean) : [];
+    if (lines.length === 0) {
+      return;
+    }
+    setParamOverrideTarget({
+      lines,
+      modelName: log?.model_name || '',
+      requestId: log?.request_id || '',
+      requestPath: other?.request_path || '',
+    });
+    setShowParamOverrideModal(true);
   };
 
   // Format logs data
@@ -600,6 +616,37 @@ export const useLogsData = () => {
           value: other.request_path,
         });
       }
+      if (Array.isArray(other?.po) && other.po.length > 0) {
+        expandDataLocal.push({
+          key: t('参数覆盖'),
+          value: (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Tag color='blue' shape='circle'>
+                {t('{{count}} 项变更', { count: other.po.length })}
+              </Tag>
+              <Button
+                theme='borderless'
+                type='primary'
+                size='small'
+                style={{ paddingLeft: 0 }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openParamOverrideModal(logs[i], other);
+                }}
+              >
+                {t('查看详情')}
+              </Button>
+            </div>
+          ),
+        });
+      }
       if (other?.billing_source === 'subscription') {
         const planId = other?.subscription_plan_id;
         const planTitle = other?.subscription_plan_title || '';
@@ -836,6 +883,9 @@ export const useLogsData = () => {
     setShowChannelAffinityUsageCacheModal,
     channelAffinityUsageCacheTarget,
     openChannelAffinityUsageCacheModal,
+    showParamOverrideModal,
+    setShowParamOverrideModal,
+    paramOverrideTarget,
 
     // Functions
     loadLogs,
@@ -847,6 +897,7 @@ export const useLogsData = () => {
     setLogsFormat,
     hasExpandableRows,
     setLogType,
+    openParamOverrideModal,
 
     // Translation
     t,
