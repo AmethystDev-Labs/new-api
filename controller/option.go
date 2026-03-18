@@ -35,6 +35,7 @@ func collectModelNamesFromOptionValue(raw string, modelNames map[string]struct{}
 
 	var parsed map[string]any
 	if err := common.UnmarshalJsonStr(raw, &parsed); err != nil {
+		common.SysLog(fmt.Sprintf("failed to unmarshal option value: %s", err.Error()))
 		return
 	}
 

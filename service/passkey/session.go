@@ -3,6 +3,7 @@ package passkey
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -32,7 +33,9 @@ func PopSessionData(c *gin.Context, key string) (*webauthn.SessionData, error) {
 		return nil, errSessionNotFound
 	}
 	session.Delete(key)
-	_ = session.Save()
+	if err := session.Save(); err != nil {
+		return nil, fmt.Errorf("failed to save session after deleting invalid passkey state: %w", err)
+	}
 	var data webauthn.SessionData
 	switch value := raw.(type) {
 	case string:
