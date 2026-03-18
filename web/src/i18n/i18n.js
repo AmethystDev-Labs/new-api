@@ -23,23 +23,8 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 
 import zhCNTranslation from './locales/zh-CN.json';
 const DEFAULT_LANGUAGE = 'zh-CN';
-const SUPPORTED_LANGUAGES = ['en', 'zh-CN', 'zh-TW', 'fr', 'ru', 'ja', 'vi'];
 const localeLoaders = import.meta.glob('./locales/*.json');
-
-function normalizeLanguage(language) {
-  if (!language) {
-    return DEFAULT_LANGUAGE;
-  }
-  if (SUPPORTED_LANGUAGES.includes(language)) {
-    return language;
-  }
-  const base = language.split('-')[0];
-  if (base === 'zh') {
-    return DEFAULT_LANGUAGE;
-  }
-  const matched = SUPPORTED_LANGUAGES.find((lang) => lang === base);
-  return matched || DEFAULT_LANGUAGE;
-}
+import { normalizeLanguage, supportedLanguages } from './language';
 
 async function ensureLanguageResources(language) {
   const normalizedLanguage = normalizeLanguage(language);
@@ -78,7 +63,7 @@ i18n
   .use(initReactI18next)
   .init({
     load: 'currentOnly',
-    supportedLngs: SUPPORTED_LANGUAGES,
+    supportedLngs: supportedLanguages,
     resources: {
       [DEFAULT_LANGUAGE]: zhCNTranslation,
     },

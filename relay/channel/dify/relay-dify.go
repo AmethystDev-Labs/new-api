@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -131,10 +132,16 @@ func requestOpenAI2Dify(c *gin.Context, info *relaycommon.RelayInfo, request dto
 	}
 
 	user := request.User
-	if user == "" {
-		user = helper.GetResponseID(c)
+	if len(user) == 0 {
+		user = json.RawMessage(strconv.Quote(helper.GetResponseID(c)))
 	}
-	difyReq.User = user
+	var stringUser string
+	err := json.Unmarshal(user, &stringUser)
+	if err != nil {
+		common.SysLog("failed to unmarshal user: " + err.Error())
+		stringUser = helper.GetResponseID(c)
+	}
+	difyReq.User = stringUser
 
 	files := make([]DifyFile, 0)
 	var content strings.Builder

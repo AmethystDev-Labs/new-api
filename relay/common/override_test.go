@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	common2 "github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/types"
 
 	"github.com/QuantumNous/new-api/dto"
@@ -1653,6 +1654,141 @@ func TestApplyParamOverrideSetHeaderMapDeleteWholeHeaderWhenAllTokensCleared(t *
 	}
 }
 
+func TestApplyParamOverrideSetHeaderMapAppendsTokens(t *testing.T) {
+	input := []byte(`{"temperature":0.7}`)
+	override := map[string]interface{}{
+		"operations": []interface{}{
+			map[string]interface{}{
+				"mode": "set_header",
+				"path": "anthropic-beta",
+				"value": map[string]interface{}{
+					"$append": []interface{}{"context-1m-2025-08-07", "computer-use-2025-01-24"},
+				},
+			},
+		},
+	}
+	ctx := map[string]interface{}{
+		"header_override": map[string]interface{}{
+			"anthropic-beta": "computer-use-2025-01-24",
+		},
+	}
+
+	out, err := ApplyParamOverride(input, override, ctx)
+	if err != nil {
+		t.Fatalf("ApplyParamOverride returned error: %v", err)
+	}
+	assertJSONEqual(t, `{"temperature":0.7}`, string(out))
+
+	headers, ok := ctx["header_override"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected header_override context map")
+	}
+	if headers["anthropic-beta"] != "computer-use-2025-01-24,context-1m-2025-08-07" {
+		t.Fatalf("expected anthropic-beta to append new token without duplicates, got: %v", headers["anthropic-beta"])
+	}
+}
+
+func TestApplyParamOverrideSetHeaderMapAppendsTokensWhenHeaderMissing(t *testing.T) {
+	input := []byte(`{"temperature":0.7}`)
+	override := map[string]interface{}{
+		"operations": []interface{}{
+			map[string]interface{}{
+				"mode": "set_header",
+				"path": "anthropic-beta",
+				"value": map[string]interface{}{
+					"$append": []interface{}{"context-1m-2025-08-07", "computer-use-2025-01-24"},
+				},
+			},
+		},
+	}
+
+	ctx := map[string]interface{}{}
+	out, err := ApplyParamOverride(input, override, ctx)
+	if err != nil {
+		t.Fatalf("ApplyParamOverride returned error: %v", err)
+	}
+	assertJSONEqual(t, `{"temperature":0.7}`, string(out))
+
+	headers, ok := ctx["header_override"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected header_override context map")
+	}
+	if headers["anthropic-beta"] != "context-1m-2025-08-07,computer-use-2025-01-24" {
+		t.Fatalf("expected anthropic-beta to be created from appended tokens, got: %v", headers["anthropic-beta"])
+	}
+}
+
+func TestApplyParamOverrideSetHeaderMapKeepOnlyDeclaredDropsUndeclaredTokens(t *testing.T) {
+	input := []byte(`{"temperature":0.7}`)
+	override := map[string]interface{}{
+		"operations": []interface{}{
+			map[string]interface{}{
+				"mode": "set_header",
+				"path": "anthropic-beta",
+				"value": map[string]interface{}{
+					"computer-use-2025-01-24": "computer-use-2025-01-24",
+					"$append":                 []interface{}{"context-1m-2025-08-07"},
+					"$keep_only_declared":     true,
+				},
+			},
+		},
+	}
+	ctx := map[string]interface{}{
+		"header_override": map[string]interface{}{
+			"anthropic-beta": "advanced-tool-use-2025-11-20,computer-use-2025-01-24",
+		},
+	}
+
+	out, err := ApplyParamOverride(input, override, ctx)
+	if err != nil {
+		t.Fatalf("ApplyParamOverride returned error: %v", err)
+	}
+	assertJSONEqual(t, `{"temperature":0.7}`, string(out))
+
+	headers, ok := ctx["header_override"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected header_override context map")
+	}
+	if headers["anthropic-beta"] != "computer-use-2025-01-24,context-1m-2025-08-07" {
+		t.Fatalf("expected anthropic-beta to keep only declared tokens, got: %v", headers["anthropic-beta"])
+	}
+}
+
+func TestApplyParamOverrideSetHeaderMapKeepOnlyDeclaredDeletesHeaderWhenNothingDeclaredMatches(t *testing.T) {
+	input := []byte(`{"temperature":0.7}`)
+	override := map[string]interface{}{
+		"operations": []interface{}{
+			map[string]interface{}{
+				"mode": "set_header",
+				"path": "anthropic-beta",
+				"value": map[string]interface{}{
+					"computer-use-2025-01-24": "computer-use-2025-01-24",
+					"$keep_only_declared":     true,
+				},
+			},
+		},
+	}
+	ctx := map[string]interface{}{
+		"header_override": map[string]interface{}{
+			"anthropic-beta": "advanced-tool-use-2025-11-20",
+		},
+	}
+
+	out, err := ApplyParamOverride(input, override, ctx)
+	if err != nil {
+		t.Fatalf("ApplyParamOverride returned error: %v", err)
+	}
+	assertJSONEqual(t, `{"temperature":0.7}`, string(out))
+
+	headers, ok := ctx["header_override"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected header_override context map")
+	}
+	if _, exists := headers["anthropic-beta"]; exists {
+		t.Fatalf("expected anthropic-beta to be deleted when no declared tokens remain, got: %v", headers["anthropic-beta"])
+	}
+}
+
 func TestApplyParamOverrideConditionsObjectShorthand(t *testing.T) {
 	input := []byte(`{"temperature":0.7}`)
 	override := map[string]interface{}{
@@ -1929,6 +2065,105 @@ func TestRemoveDisabledFieldsAllowInferenceGeo(t *testing.T) {
 		t.Fatalf("RemoveDisabledFields returned error: %v", err)
 	}
 	assertJSONEqual(t, `{"inference_geo":"eu","store":true}`, string(out))
+}
+
+func TestApplyParamOverrideWithRelayInfoRecordsOperationAuditInDebugMode(t *testing.T) {
+	originalDebugEnabled := common2.DebugEnabled
+	common2.DebugEnabled = true
+	t.Cleanup(func() {
+		common2.DebugEnabled = originalDebugEnabled
+	})
+
+	info := &RelayInfo{
+		ChannelMeta: &ChannelMeta{
+			ParamOverride: map[string]interface{}{
+				"operations": []interface{}{
+					map[string]interface{}{
+						"mode": "copy",
+						"from": "metadata.target_model",
+						"to":   "model",
+					},
+					map[string]interface{}{
+						"mode":  "set",
+						"path":  "service_tier",
+						"value": "flex",
+					},
+					map[string]interface{}{
+						"mode":  "set",
+						"path":  "temperature",
+						"value": 0.1,
+					},
+				},
+			},
+		},
+	}
+
+	out, err := ApplyParamOverrideWithRelayInfo([]byte(`{
+		"model":"gpt-4.1",
+		"temperature":0.7,
+		"metadata":{"target_model":"gpt-4.1-mini"}
+	}`), info)
+	if err != nil {
+		t.Fatalf("ApplyParamOverrideWithRelayInfo returned error: %v", err)
+	}
+	assertJSONEqual(t, `{
+		"model":"gpt-4.1-mini",
+		"temperature":0.1,
+		"service_tier":"flex",
+		"metadata":{"target_model":"gpt-4.1-mini"}
+	}`, string(out))
+
+	expected := []string{
+		"copy metadata.target_model -> model",
+		"set service_tier = flex",
+		"set temperature = 0.1",
+	}
+	if !reflect.DeepEqual(info.ParamOverrideAudit, expected) {
+		t.Fatalf("unexpected param override audit, got %#v", info.ParamOverrideAudit)
+	}
+}
+
+func TestApplyParamOverrideWithRelayInfoRecordsOnlyKeyOperationsWhenDebugDisabled(t *testing.T) {
+	originalDebugEnabled := common2.DebugEnabled
+	common2.DebugEnabled = false
+	t.Cleanup(func() {
+		common2.DebugEnabled = originalDebugEnabled
+	})
+
+	info := &RelayInfo{
+		ChannelMeta: &ChannelMeta{
+			ParamOverride: map[string]interface{}{
+				"operations": []interface{}{
+					map[string]interface{}{
+						"mode": "copy",
+						"from": "metadata.target_model",
+						"to":   "model",
+					},
+					map[string]interface{}{
+						"mode":  "set",
+						"path":  "temperature",
+						"value": 0.1,
+					},
+				},
+			},
+		},
+	}
+
+	_, err := ApplyParamOverrideWithRelayInfo([]byte(`{
+		"model":"gpt-4.1",
+		"temperature":0.7,
+		"metadata":{"target_model":"gpt-4.1-mini"}
+	}`), info)
+	if err != nil {
+		t.Fatalf("ApplyParamOverrideWithRelayInfo returned error: %v", err)
+	}
+
+	expected := []string{
+		"copy metadata.target_model -> model",
+	}
+	if !reflect.DeepEqual(info.ParamOverrideAudit, expected) {
+		t.Fatalf("unexpected param override audit, got %#v", info.ParamOverrideAudit)
+	}
 }
 
 func assertJSONEqual(t *testing.T, want, got string) {
